@@ -1,7 +1,8 @@
 {
   "include": [
     "src",
-    "test"
+    "test",
+    "scripts"
   ],
   "exclude": [
     "**/node_modules",
@@ -49,6 +50,10 @@
       "extraPaths": [
         "src"
       ]
+    },
+    {
+      "root": "scripts",
+      "pythonVersion": "3.10"
     }
   ]
 }

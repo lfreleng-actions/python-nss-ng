@@ -39,15 +39,27 @@ jobs:
   build-linux:
     name: 'Fedora Python ${{ matrix.python-version }} (${{ matrix.arch }})'
     runs-on: ${{ matrix.runner }}
-    # Use Fedora container for newer NSS/NSPR versions
-    # Fedora 42 provides NSS 3.117+ with modern cryptographic key types
-    # (edKey, ecMontKey, mldsaKey) which are required by this project.
-    # Ubuntu 24.04 only has NSS 3.98 which lacks these features.
-    container: fedora:latest
+    # Use a Fedora container for newer NSS/NSPR versions: Fedora ships
+    # NSS 3.117+ with modern cryptographic key types (edKey, ecMontKey,
+    # mldsaKey) required by this project, whereas Ubuntu 24.04 only has
+    # NSS 3.98 which lacks them.
+    #
+    # Pinned to fedora:44 to stay aligned with the downstream consumer
+    # that builds on this repo's content -- the Sigul signing container
+    # stack, which uses `FROM fedora:44`:
+    #   https://github.com/lfreleng-actions/sigul-sign-docker
+    # Testing on the same Fedora release that consumer ships on catches
+    # NSS/Python incompatibilities before they reach that stack.
+    #
+    # Pinning to a tag (not :latest) also keeps the NSS/Python versions
+    # the matrix depends on stable and satisfies zizmor's
+    # unpinned-images audit, while still receiving Fedora's security
+    # rebuilds (unlike a frozen digest).
+    container: fedora:44
     strategy:
       fail-fast: false
       matrix:
-        # Use Python versions available in Fedora 42
+        # Use Python versions available in Fedora 44
         # Note: Python 3.13 is not available; use 3.14 instead
         python-version: ['3.10', '3.11', '3.12', '3.14']
         # Build for both x86_64 and ARM64 architectures
@@ -65,6 +77,15 @@ jobs:
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
           egress-policy: audit
+
+      - name: 'Install git before checkout (required for dynamic versioning)'
+        # fedora:latest ships without git, so actions/checkout would fall
+        # back to a REST API tarball download instead of a real clone,
+        # leaving no .git directory. The project now derives its version
+        # from the git tag (scripts/meson-version.py), so the checkout
+        # must be a genuine clone. Installing git here -- before the
+        # checkout step -- ensures that.
+        run: dnf install -y git
 
       - name: Checkout code
         # yamllint disable-line rule:line-length

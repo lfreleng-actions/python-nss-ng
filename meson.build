@@ -4,7 +4,14 @@
 project(
   'python-nss-ng',
   'c',
-  version: '0.1.0',
+  # Dynamic versioning: the version is derived from the most recent
+  # `v*` git tag (or, for builds from an sdist, the baked-in
+  # `_version.txt`). See scripts/meson-version.py for the resolution
+  # logic and `meson.add_dist_script` below for the sdist fallback.
+  version: run_command(
+    'scripts/meson-version.py',
+    check: true,
+  ).stdout().strip(),
   license: 'MPL-2.0 OR GPL-2.0-or-later OR LGPL-2.0-or-later',
   default_options: [
     'warning_level=2',
@@ -12,6 +19,12 @@ project(
   ],
   meson_version: '>=1.2.0',
 )
+
+# Bake the resolved version into the source distribution so that wheels
+# built from the sdist (which has no `.git`) can recover the correct
+# version. The script writes `$MESON_DIST_ROOT/_version.txt`, which
+# scripts/meson-version.py reads back as its fallback.
+meson.add_dist_script('scripts/meson-version.py', '--bake-dist')
 
 # Import Python module
 py = import('python').find_installation(pure: false)

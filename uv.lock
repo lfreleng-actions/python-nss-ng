@@ -695,7 +695,6 @@ wheels = [
 
 [[package]]
 name = "python-nss-ng"
-version = "1.0.5"
 source = { editable = "." }
 
 [package.optional-dependencies]
