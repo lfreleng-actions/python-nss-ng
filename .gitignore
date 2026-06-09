@@ -28,6 +28,9 @@ __pycache__/
 # Distribution / packaging
 src/dependamerge/_version.py
 src/_version.py
+# Dynamic-versioning fallback baked into the sdist by
+# scripts/meson-version.py --bake-dist; never tracked in the work tree.
+/_version.txt
 .Python
 .pdm-python
 .pdm-build

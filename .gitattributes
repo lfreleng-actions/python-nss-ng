@@ -1,6 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: 2025 The Linux Foundation
 
+# Substitute tag/commit metadata into .git_archival.txt when a
+# `git archive` (e.g. a GitHub auto-generated source tarball) is
+# produced, so scripts/meson-version.py can recover the version from
+# archives that carry neither .git nor a baked _version.txt.
+.git_archival.txt export-subst
+
 # Exclude development and CI files from distribution
 .gitattributes export-ignore
 .gitignore export-ignore

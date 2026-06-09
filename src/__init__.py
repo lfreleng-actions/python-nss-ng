@@ -5,6 +5,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
 
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 
 # Platform support check - only Linux and macOS are supported
 if sys.platform.startswith("win"):
@@ -312,4 +314,10 @@ To be added
 
 """
 
-__version__ = "1.0.1"
+try:
+    __version__ = _pkg_version("python-nss-ng")
+except PackageNotFoundError:  # pragma: no cover - running from an uninstalled tree
+    # Importing from a source checkout that was never installed (e.g.
+    # building the docs in-tree). The real version is resolved from the
+    # git tag at build time; fall back to a clearly-non-release marker.
+    __version__ = "0.0.0+unknown"
