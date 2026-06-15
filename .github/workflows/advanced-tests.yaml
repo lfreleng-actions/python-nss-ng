@@ -109,10 +109,12 @@ jobs:
 
       - name: Summary
         if: always()
+        env:
+          PYVER: ${{ matrix.python-version }}
         run: |
           {
             echo "## Pure Python Tests Summary"
-            echo "Python version: ${{ matrix.python-version }}"
+            echo "Python version: ${PYVER}"
             echo "✅ All pure Python tests completed"
           } >> "$GITHUB_STEP_SUMMARY"
 
