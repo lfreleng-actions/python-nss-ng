@@ -272,7 +272,7 @@ def get_free_port():
     happens quickly enough that this is rarely an issue in practice.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
+        s.bind(("127.0.0.1", 0))
         s.listen(1)
         port = s.getsockname()[1]
     return port
@@ -283,8 +283,10 @@ def server(test_port):
         print("starting server:")
 
     # Initialize
-    # Setup an IP Address to listen on any of our interfaces
-    net_addr = io.NetworkAddress(io.PR_IpAddrAny, test_port)
+    # Setup an IP Address to listen on the loopback interface only.
+    # The tests are entirely local (the client connects via localhost),
+    # so there is no need to listen on all interfaces.
+    net_addr = io.NetworkAddress(io.PR_IpAddrLoopback, test_port)
 
     if use_ssl:
         if info:

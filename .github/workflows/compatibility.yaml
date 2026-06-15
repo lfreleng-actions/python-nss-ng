@@ -94,9 +94,10 @@ jobs:
           fetch-depth: 0  # Full history needed for meson dist
 
       - name: Install build dependencies in Fedora container
+        env:
+          PY_VER: ${{ matrix.python-version }}
         run: |
           # Install Python version from matrix
-          PY_VER="${{ matrix.python-version }}"
           dnf install -y \
             nss-devel \
             nspr-devel \
@@ -107,8 +108,8 @@ jobs:
             make \
             ccache \
             git \
-            python${PY_VER} \
-            python${PY_VER}-devel
+            "python${PY_VER}" \
+            "python${PY_VER}-devel"
 
           # Configure Git to trust the workspace directory
           # This is needed for meson dist to work in containers
@@ -123,7 +124,7 @@ jobs:
           git log --oneline -1 || echo "ERROR: Cannot read git log"
 
           # Create convenient alias
-          ln -sf /usr/bin/python${PY_VER} /usr/local/bin/python-build
+          ln -sf "/usr/bin/python${PY_VER}" /usr/local/bin/python-build
 
           # Verify installation
           python-build --version
@@ -293,15 +294,18 @@ jobs:
 
     steps:
       - name: Report status
+        env:
+          LINUX_RESULT: ${{ needs.build-linux.result }}
+          MACOS_RESULT: ${{ needs.build-macos.result }}
         run: |
           {
             echo "## Build Status Report"
             echo ""
             echo "### Fedora Build"
-            echo "Status: ${{ needs.build-linux.result }}"
+            echo "Status: ${LINUX_RESULT}"
             echo ""
             echo "### macOS Build"
-            echo "Status: ${{ needs.build-macos.result }}"
+            echo "Status: ${MACOS_RESULT}"
             echo ""
             echo "### Notes"
             echo "- Fedora builds test Python 3.10, 3.11, 3.12, 3.14 with"

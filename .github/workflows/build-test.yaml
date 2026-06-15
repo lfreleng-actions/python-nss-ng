@@ -324,6 +324,8 @@ jobs:
 
       - name: Post-test diagnostics (if test failed)
         if: failure()
+        env:
+          PYVER: ${{ matrix.python-version }}
         run: |
             echo "=== POST-TEST DIAGNOSTICS ==="
             echo "Checking where package was actually installed..."
@@ -357,22 +359,21 @@ jobs:
             fi
             echo ""
             echo "Searching for nss package in all locations:"
-            PYVER="${{ matrix.python-version }}"
-            find /home/runner/.local/lib/python${PYVER}/ -name "nss" \
+            find "/home/runner/.local/lib/python${PYVER}/" -name "nss" \
               -type d 2>/dev/null || echo "Not found in .local"
-            find /usr/local/lib/python${PYVER}/ -name "nss" \
+            find "/usr/local/lib/python${PYVER}/" -name "nss" \
               -type d 2>/dev/null || echo "Not found in /usr/local"
             find /usr/lib/python3/dist-packages/ -name "nss" \
               -type d 2>/dev/null || echo "Not found in dist-packages"
             echo ""
             echo "Searching for ANY python-nss-ng files:"
-            find /home/runner/.local/lib/python${PYVER}/ \
+            find "/home/runner/.local/lib/python${PYVER}/" \
               -name "*python*nss*" 2>/dev/null | head -20 || true
-            find /usr/local/lib/python${PYVER}/ \
+            find "/usr/local/lib/python${PYVER}/" \
               -name "*python*nss*" 2>/dev/null | head -20 || true
             echo ""
             echo "Searching for .so files with nss:"
-            find /home/runner/.local/lib/python${PYVER}/ \
+            find "/home/runner/.local/lib/python${PYVER}/" \
               -name "*nss*.so" 2>/dev/null || echo "No .so files found"
             echo ""
             echo "Checking pip cache:"
@@ -468,6 +469,8 @@ jobs:
 
       - name: Post-test diagnostics (if test failed)
         if: failure()
+        env:
+          PYVER: ${{ matrix.python-version }}
         run: |
             echo "=== POST-TEST DIAGNOSTICS ==="
             echo "Checking where package was actually installed..."
@@ -501,22 +504,21 @@ jobs:
             fi
             echo ""
             echo "Searching for nss package in all locations:"
-            PYVER="${{ matrix.python-version }}"
-            find /home/runner/.local/lib/python${PYVER}/ -name "nss" \
+            find "/home/runner/.local/lib/python${PYVER}/" -name "nss" \
               -type d 2>/dev/null || echo "Not found in .local"
-            find /usr/local/lib/python${PYVER}/ -name "nss" \
+            find "/usr/local/lib/python${PYVER}/" -name "nss" \
               -type d 2>/dev/null || echo "Not found in /usr/local"
             find /usr/lib/python3/dist-packages/ -name "nss" \
               -type d 2>/dev/null || echo "Not found in dist-packages"
             echo ""
             echo "Searching for ANY python-nss-ng files:"
-            find /home/runner/.local/lib/python${PYVER}/ \
+            find "/home/runner/.local/lib/python${PYVER}/" \
               -name "*python*nss*" 2>/dev/null | head -20 || true
-            find /usr/local/lib/python${PYVER}/ \
+            find "/usr/local/lib/python${PYVER}/" \
               -name "*python*nss*" 2>/dev/null | head -20 || true
             echo ""
             echo "Searching for .so files with nss:"
-            find /home/runner/.local/lib/python${PYVER}/ \
+            find "/home/runner/.local/lib/python${PYVER}/" \
               -name "*nss*.so" 2>/dev/null || echo "No .so files found"
             echo ""
             echo "Checking pip cache:"
