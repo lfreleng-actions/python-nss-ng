@@ -51,11 +51,13 @@ jobs:
     # Testing on the same Fedora release that consumer ships on catches
     # NSS/Python incompatibilities before they reach that stack.
     #
-    # Pinning to a tag (not :latest) also keeps the NSS/Python versions
-    # the matrix depends on stable and satisfies zizmor's
-    # unpinned-images audit, while still receiving Fedora's security
-    # rebuilds (unlike a frozen digest).
-    container: fedora:44
+    # Pinning to a tag (not :latest) keeps the NSS/Python versions the
+    # matrix depends on stable while still receiving Fedora's security
+    # rebuilds (unlike a frozen digest). A digest pin would freeze those
+    # rebuilds out, so zizmor's unpinned-images audit is deliberately
+    # suppressed here -- this is a CI test container, not a release or
+    # runtime artefact, so tracking the tag is the intended behaviour.
+    container: fedora:44  # zizmor: ignore[unpinned-images]
     strategy:
       fail-fast: false
       matrix:
@@ -92,6 +94,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0  # Full history needed for meson dist
+          persist-credentials: false
 
       - name: Install build dependencies in Fedora container
         env:
@@ -197,6 +200,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0  # Full history needed for meson dist
+          persist-credentials: false
 
       - name: Set up Python ${{ matrix.python-version }}
         # yamllint disable rule:line-length
