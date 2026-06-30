@@ -1,8 +1,19 @@
 ---
 # SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2025 The Linux Foundation
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
 
-# Runs on a new pull request, performs build and runs tests
+# Runs on a tag push, performs build/test/release.
+#
+# Thin caller for the reusable multi-arch Python build/test/release
+# pipeline in lfreleng-actions/python-workflows. The reusable `release`
+# job validates the tag, builds (x64 + arm64), tests, audits, scans,
+# attaches artefacts and promotes the draft release. Native NSS/NSPR
+# prerequisites are supplied through the committed setup script.
+#
+# PyPI publishing is performed HERE, not in the reusable workflow: PyPI
+# trusted publishing / token credentials are scoped to this repository,
+# so the `test-pypi` and `pypi` jobs below download the run-scoped
+# 'dist-*' build artefacts the reusable workflow produced and upload them.
 name: 'Python Build/Test/Release'
 
 # yamllint disable-line rule:truthy
@@ -12,760 +23,45 @@ on:
     tags:
       - '**'
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 permissions: {}
 
+env:
+  # Harden-runner egress allow-list shared by the publish jobs. Loaded
+  # out-of-band from lfreleng-actions/.github and matches the default used
+  # inside the reusable workflow.
+  # yamllint disable-line rule:line-length
+  HARDEN_RUNNER_ALLOWLIST: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
+
 jobs:
-  repository-metadata:
-    name: "Repository Metadata"
-    runs-on: ubuntu-latest
+  release:
+    name: 'Build/Test/Release'
     permissions:
-      contents: read
-      pull-requests: read
-    timeout-minutes: 5
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-        with:
-          fetch-depth: 0
-
-      - name: "Gather repository metadata"
-        id: repo-metadata
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/repository-metadata-action@ceabcd987d13d7bfefd2372e01eebb0ddac45956  # v0.2.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_summary: 'false'
-          gerrit_summary: 'false'
-          artifact_upload: 'true'
-          artifact_formats: 'json'
-
-  tag-validate:
-    name: 'Validate Tag Push'
-    runs-on: 'ubuntu-latest'
-    permissions:
-      contents: write  # Needed to draft a release
-    timeout-minutes: 5
-    outputs:
-      tag: "${{ steps.tag-validate.outputs.tag_name }}"
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      - name: 'Checkout repository'
-        # yamllint disable-line rule:line-length
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: 'Verify pushed tag'
-        id: 'tag-validate'
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/tag-validate-action@461d187a53b5de27b068c2cea5af972c085a4a6a  # v1.0.2
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          require_type: 'semver'
-          reject_development: 'true'
-          require_github: 'true'
-          # yamllint disable-line rule:line-length
-          require_signed: 'ssh,gpg-unverifiable'  # Cannot verify GPG without key
-
-      - name: 'Ensure draft release exists'
-        id: 'ensure-release'
-        shell: bash
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          TAG_NAME: "${{ steps.tag-validate.outputs.tag_name }}"
-        run: |
-          # Ensure draft release exists
-          TAG="${TAG_NAME}"
-          # Check if release exists and get its draft status
-          if RELEASE_INFO=$(gh release view "$TAG" \
-            --json isDraft 2>/dev/null); then
-            IS_DRAFT=$(echo "$RELEASE_INFO" | jq -r '.isDraft')
-            if [ "$IS_DRAFT" = "true" ]; then
-              echo "Draft release for tag $TAG already exists"
-            else
-              echo "Published release for tag $TAG already exists"
-            fi
-          else
-            echo "Creating draft release for tag $TAG"
-            gh release create "$TAG" \
-              --draft \
-              --title "Release $TAG" \
-              --notes "Automated release for $TAG"
-          fi
-
-  python-metadata:
-    name: 'Extract Project Metadata'
-    needs: 'tag-validate'
-    runs-on: ubuntu-latest
-    outputs:
-      matrix_json: "${{ steps.metadata.outputs.python_matrix_json }}"
-      project_name: "${{ steps.metadata.outputs.project_name }}"
-    permissions:
-      contents: read
-    timeout-minutes: 5
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: 'Extract Python project metadata'
-        id: metadata
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/build-metadata-action@bc866421c816f63e6ab09f3d42bf95566be50940  # v0.4.0
-        with:
-          path_prefix: '.'
-          output_format: summary
-          include_environment: true
-          use_version_extract: true
-          verbose: true
-
-  python-build-sdist:
-    name: 'Build Source Distribution'
-    runs-on: ubuntu-latest
-    needs: python-metadata
-    permissions:
-      contents: read
-      id-token: write       # Needed for attestations
-      attestations: write   # Needed for attestations
-    timeout-minutes: 10
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR from source
-        run: |
-          chmod +x .github/scripts/install-nss.sh
-          ./.github/scripts/install-nss.sh
-
-          # Set environment variables for subsequent steps
-          echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig:$PKG_CONFIG_PATH" \
-            >> "$GITHUB_ENV"
-          echo "LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
-
-      - name: "Build source distribution"
-        id: python-build-sdist
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-build-action@5f570d5d17a7315074a824a91c6a705b6fc5c7dd  # v1.1.2
-        with:
-          artefact_name: python-nss-ng-sdist
-          build_formats: sdist
-          attestations: true
-
-  python-build-x64:
-    name: "Python Build x64 ${{ matrix.python-version }}"
-    runs-on: ubuntu-latest
-    needs: python-metadata
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-      id-token: write       # Needed for attestations
-      attestations: write   # Needed for attestations
-    timeout-minutes: 20
-    env:
-      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: "Build Python project ${{ matrix.python-version }}"
-        id: python-build
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-build-action@5f570d5d17a7315074a824a91c6a705b6fc5c7dd  # v1.1.2
-        with:
-          artefact_name: python-nss-ng-x64-py${{ matrix.python-version }}
-          python_version: ${{ matrix.python-version }}
-          make: true
-          make_args: 'deps-nss env-github-actions'
-          build_formats: wheel
-          auditwheel: true
-          manylinux_version: manylinux_2_38
-          sigstore_sign: true
-          attestations: true
-
-  python-build-arm64:
-    name: "Python Build ARM64 ${{ matrix.python-version }}"
-    runs-on: ubuntu-24.04-arm
-    needs: python-metadata
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-      id-token: write       # Needed for attestations
-      attestations: write   # Needed for attestations
-    timeout-minutes: 20
-    env:
-      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: "Build Python project ${{ matrix.python-version }}"
-        id: python-build
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-build-action@5f570d5d17a7315074a824a91c6a705b6fc5c7dd  # v1.1.2
-        with:
-          artefact_name: python-nss-ng-arm64-py${{ matrix.python-version }}
-          python_version: ${{ matrix.python-version }}
-          make: true
-          make_args: 'deps-nss env-github-actions'
-          build_formats: wheel
-          auditwheel: true
-          manylinux_version: manylinux_2_38
-          sigstore_sign: true
-          attestations: true
-
-  python-tests-x64:
-    name: "Python Tests x64 ${{ matrix.python-version }}"
-    runs-on: 'ubuntu-latest'
-    needs: ['python-metadata', 'python-build-x64']
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-    timeout-minutes: 12
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR and install system dependencies
-        run: |
-          # Only install system-level (apt) deps here; pip deps are
-          # handled later by python-test-action under the correct
-          # actions/setup-python interpreter.
-          make deps-nss deps-test-system env-github-actions
-          sudo ldconfig
-
-      - name: "Python tests [pytest] ${{ matrix.python-version }}"
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-test-action@aa753462f090101dcb0c4708e9499f55e276e373  # v1.1.2
-        with:
-          python_version: ${{ matrix.python-version }}
-          # yamllint disable-line rule:line-length
-          artefact_name: python-nss-ng-x64-py${{ matrix.python-version }}-coverage
-          report_artefact: 'true'
-        env:
-          LD_LIBRARY_PATH: /usr/lib:/usr/lib/x86_64-linux-gnu
-
-  python-tests-arm64:
-    name: "Python Tests ARM64 ${{ matrix.python-version }}"
-    runs-on: 'ubuntu-24.04-arm'
-    needs: ['python-metadata', 'python-build-arm64']
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-    timeout-minutes: 12
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR and install system dependencies
-        run: |
-          # Only install system-level (apt) deps here; pip deps are
-          # handled later by python-test-action under the correct
-          # actions/setup-python interpreter.
-          make deps-nss deps-test-system env-github-actions
-          sudo ldconfig
-
-      - name: "Python tests [pytest] ${{ matrix.python-version }}"
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-test-action@aa753462f090101dcb0c4708e9499f55e276e373  # v1.1.2
-        with:
-          python_version: ${{ matrix.python-version }}
-          # yamllint disable-line rule:line-length
-          artefact_name: python-nss-ng-arm64-py${{ matrix.python-version }}-coverage
-          report_artefact: 'true'
-        env:
-          LD_LIBRARY_PATH: /usr/lib:/usr/lib/aarch64-linux-gnu
-
-  python-audit-x64:
-    name: "Python Audit x64 ${{ matrix.python-version }}"
-    runs-on: 'ubuntu-latest'
-    needs: ['python-metadata', 'python-build-x64']
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-    timeout-minutes: 10
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR and install system dependencies
-        run: |
-            make deps-nss deps-test-system env-github-actions
-
-      - name: "Audit dependencies ${{ matrix.python-version }}"
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-audit-action@fcb1b2e0cdbe19edf11057e598138f3d57f2b249  # v0.3.1
-        with:
-          python_version: "${{ matrix.python-version }}"
-          artefact_name: python-nss-ng-x64-py${{ matrix.python-version }}
-
-  python-audit-arm64:
-    name: "Python Audit ARM64 ${{ matrix.python-version }}"
-    runs-on: 'ubuntu-24.04-arm'
-    needs: ['python-metadata', 'python-build-arm64']
-    strategy:
-      fail-fast: false
-      matrix: "${{ fromJson(needs.python-metadata.outputs.matrix_json) }}"
-    permissions:
-      contents: read
-    timeout-minutes: 10
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR and install system dependencies
-        run: |
-          make deps-nss deps-test-system env-github-actions
-
-      - name: "Audit dependencies ${{ matrix.python-version }}"
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-audit-action@fcb1b2e0cdbe19edf11057e598138f3d57f2b249  # v0.3.1
-        with:
-          python_version: "${{ matrix.python-version }}"
-          artefact_name: python-nss-ng-arm64-py${{ matrix.python-version }}
-
-  sbom-x64:
-    name: "Generate SBOM x64"
-    runs-on: ubuntu-latest
-    needs: ['python-metadata', 'python-build-x64']
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR from source
-        run: |
-          make deps-nss env-github-actions
-
-      - name: "Generate SBOM"
-        id: sbom
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-sbom-action@ae4aca2ef28d7da4ec95049cc78be43e632d322a  # v0.1.0
-        with:
-          include_dev: "false"
-          sbom_format: "both"
-
-      - name: "Upload SBOM artifacts"
-        # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: sbom-files-x64
-          path: |
-            sbom-cyclonedx.json
-            sbom-cyclonedx.xml
-          retention-days: 45
-
-      - name: "Security scan with Grype (SARIF)"
-        # yamllint disable-line rule:line-length
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
-        id: grype-sarif
-        with:
-          sbom: "${{ steps.sbom.outputs.sbom_json_path }}"
-          output-format: "sarif"
-          output-file: "grype-results.sarif"
-          fail-build: "true"
-
-      - name: "Security scan with Grype (Text/Table)"
-        # yamllint disable-line rule:line-length
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
-        id: grype-table
-        if: always()
-        with:
-          sbom: "${{ steps.sbom.outputs.sbom_json_path }}"
-          output-format: "table"
-          output-file: "grype-results.txt"
-          fail-build: "false"
-
-      - name: "Upload Grype scan results"
-        # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: grype-scan-results-x64
-          path: |
-            grype-results.sarif
-            grype-results.txt
-          retention-days: 90
-
-      - name: "Grype summary"
-        if: always()
-        run: |
-            # Grype summary
-            echo "## Grype Summary (x64)" >> "$GITHUB_STEP_SUMMARY"
-            [ -f grype-results.txt ] && cat grype-results.txt \
-              >> "$GITHUB_STEP_SUMMARY" || echo "No scan results available" \
-              >> "$GITHUB_STEP_SUMMARY"
-
-  sbom-arm64:
-    name: "Generate SBOM ARM64"
-    runs-on: ubuntu-24.04-arm
-    needs: ['python-metadata', 'python-build-arm64']
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: Build NSS/NSPR from source
-        run: |
-          make deps-nss env-github-actions
-
-      - name: "Generate SBOM"
-        id: sbom
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/python-sbom-action@ae4aca2ef28d7da4ec95049cc78be43e632d322a  # v0.1.0
-        with:
-          include_dev: "false"
-          sbom_format: "both"
-
-      - name: "Upload SBOM artifacts"
-        # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: sbom-files-arm64
-          path: |
-            sbom-cyclonedx.json
-            sbom-cyclonedx.xml
-          retention-days: 45
-
-      - name: "Security scan with Grype (SARIF)"
-        # yamllint disable-line rule:line-length
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
-        id: grype-sarif
-        with:
-          sbom: "${{ steps.sbom.outputs.sbom_json_path }}"
-          output-format: "sarif"
-          output-file: "grype-results.sarif"
-          fail-build: "true"
-
-      - name: "Security scan with Grype (Text/Table)"
-        # yamllint disable-line rule:line-length
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
-        id: grype-table
-        if: always()
-        with:
-          sbom: "${{ steps.sbom.outputs.sbom_json_path }}"
-          output-format: "table"
-          output-file: "grype-results.txt"
-          fail-build: "false"
-
-      - name: "Upload Grype scan results"
-        # yamllint disable-line rule:line-length
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: grype-scan-results-arm64
-          path: |
-            grype-results.sarif
-            grype-results.txt
-          retention-days: 90
-
-      - name: "Grype summary"
-        if: always()
-        run: |
-            # Grype summary
-            echo "## Grype Summary (ARM64)" >> "$GITHUB_STEP_SUMMARY"
-            [ -f grype-results.txt ] && cat grype-results.txt \
-              >> "$GITHUB_STEP_SUMMARY" || echo "No scan results available" \
-              >> "$GITHUB_STEP_SUMMARY"
-
+      contents: write       # Create the GitHub release / attach assets
+      id-token: write       # OIDC for build provenance attestations
+      attestations: write   # Build provenance attestations
+    # yamllint disable-line rule:line-length
+    uses: lfreleng-actions/python-workflows/.github/workflows/build-test-release-multiarch.yaml@4f48e1cd660f94ab9f1d4bbc15a948c1aca105ad  # v0.1.1
+    with:
+      # Build NSS/NSPR from source during the python-build step.
+      make: true
+      make_args: 'deps-nss env-github-actions'
+      # Native prerequisites (NSS/NSPR + system test deps) for the test,
+      # audit and SBOM jobs, plus LD_LIBRARY_PATH / PKG_CONFIG_PATH export.
+      setup_script: '.github/scripts/setup-nss.sh'
+
+  # ---------------------------------------------------------------------------
+  # PyPI publishing — runs in THIS repository so publishing credentials
+  # remain scoped here. The multi-arch build produces several 'dist-*'
+  # artefacts, so the publish jobs download them with `artefact_pattern`.
+  # ---------------------------------------------------------------------------
   test-pypi:
     name: 'Test PyPI Publishing'
+    needs: release
     runs-on: 'ubuntu-latest'
-    needs:
-      - 'tag-validate'
-      - 'python-build-sdist'
-      - 'python-tests-x64'
-      - 'python-tests-arm64'
-      - 'python-audit-x64'
-      - 'python-audit-arm64'
     environment:
       name: 'development'
     permissions:
@@ -773,21 +69,13 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     timeout-minutes: 5
     steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
+      # Load the egress allow-list out-of-band and publish it as
+      # $CONNECTION_ALLOW_LIST for the harden-runner step below.
       # yamllint disable-line rule:line-length
       - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
         with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
+          config: ${{ env.HARDEN_RUNNER_ALLOWLIST }}
 
-      # Harden the runner with the just-loaded allow-list.
       - name: 'Harden runner (block)'
         # yamllint disable-line rule:line-length
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
@@ -801,17 +89,16 @@ jobs:
         uses: lfreleng-actions/pypi-publish-action@9ed3121c20fc5988b79d6655d8e7637018b54433  # v0.1.8
         with:
           environment: 'development'
-          tag: "${{ needs.tag-validate.outputs.tag }}"
-          artefact_pattern: 'python-nss-ng-*'
+          tag: "${{ needs.release.outputs.tag }}"
+          artefact_pattern: 'dist-*'
           pypi_credential: "${{ secrets.TEST_PYPI_CREDENTIAL }}"
 
   pypi:
     name: 'Release PyPI Package'
-    runs-on: 'ubuntu-latest'
     needs:
-      - 'tag-validate'
-      - 'python-build-sdist'
-      - 'test-pypi'
+      - release
+      - test-pypi
+    runs-on: 'ubuntu-latest'
     environment:
       name: 'production'
     permissions:
@@ -819,21 +106,13 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     timeout-minutes: 5
     steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
+      # Load the egress allow-list out-of-band and publish it as
+      # $CONNECTION_ALLOW_LIST for the harden-runner step below.
       # yamllint disable-line rule:line-length
       - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
         with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
+          config: ${{ env.HARDEN_RUNNER_ALLOWLIST }}
 
-      # Harden the runner with the just-loaded allow-list.
       - name: 'Harden runner (block)'
         # yamllint disable-line rule:line-length
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
@@ -848,152 +127,6 @@ jobs:
         with:
           environment: 'production'
           attestations: true
-          tag: "${{ needs.tag-validate.outputs.tag }}"
-          artefact_pattern: 'python-nss-ng-*'
+          tag: "${{ needs.release.outputs.tag }}"
+          artefact_pattern: 'dist-*'
           pypi_credential: "${{ secrets.PYPI_CREDENTIAL }}"
-
-  # Attach build artefacts prior to release promotion
-  # This enables the GitHub immutable releases feature
-  attach-artefacts:
-    name: 'Attach Artefacts to Release'
-    runs-on: 'ubuntu-latest'
-    needs:
-      - 'tag-validate'
-      - 'python-build-sdist'
-      - 'python-build-x64'
-      - 'python-build-arm64'
-      - 'pypi'
-    # yamllint disable-line rule:line-length
-    permissions:
-      contents: write  # IMPORTANT: needed to edit release, attach artefacts
-    timeout-minutes: 5
-    env:
-      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: '⬇ Download build artefacts (wheels)'
-        # yamllint disable-line rule:line-length
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-        with:
-          pattern: 'python-nss-ng-*-py*'
-          path: 'dist'
-          merge-multiple: true
-
-      - name: '⬇ Download build artefacts (sdist)'
-        # yamllint disable-line rule:line-length
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-        with:
-          name: 'python-nss-ng-sdist'
-          path: 'dist'
-
-      - name: 'Attach build artefacts to release'
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/release-assets-action@985ecd2ba521dde165514af406dd114d3db5dab6  # v0.1.0
-        with:
-          asset_paths: '["dist/**"]'
-          release_tag: "${{ needs.tag-validate.outputs.tag }}"
-
-  promote-release:
-    name: 'Promote Draft Release'
-    # yamllint disable-line rule:line-length
-    needs:
-      - 'tag-validate'
-      - 'pypi'
-      - 'attach-artefacts'
-    runs-on: 'ubuntu-latest'
-    permissions:
-      # IMPORTANT: needed to edit a draft release and promote it
-      contents: write
-    timeout-minutes: 2
-    outputs:
-      release_url: "${{ steps.promote-release.outputs.release_url }}"
-    steps:
-      # Load the egress allow-list out-of-band from
-      # lfreleng-actions/.github and publish it as
-      # $CONNECTION_ALLOW_LIST for the harden-runner step below
-      # to consume in 'block' mode. Loading out-of-band means
-      # the workflow no longer depends on any org-level GitHub
-      # variable being exposed at runtime (org variables are
-      # unreachable from workflows triggered by PRs raised from
-      # forks, which previously forced a fallback to audit mode).
-      # yamllint disable-line rule:line-length
-      - uses: lfreleng-actions/harden-runner-block-action@42663a22f7abe31521cbc6120901353a4b2849bc  # v0.2.0
-        with:
-          # yamllint disable-line rule:line-length
-          config: 'lfreleng-actions//.github/harden-runner/lfreleng-actions/allow_list.txt@18d9c4446bea555d0783e850f6d295f844fe8f67'  # v0.1.1
-
-      # Harden the runner with the just-loaded allow-list.
-      - name: 'Harden runner (block)'
-        # yamllint disable-line rule:line-length
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: 'block'
-          allowed-endpoints: >
-            ${{ env.CONNECTION_ALLOW_LIST }}
-
-      # yamllint disable-line rule:line-length
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-
-      - name: 'Check if release is already promoted'
-        id: 'check-promoted'
-        shell: bash
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          TAG_NAME: "${{ needs.tag-validate.outputs.tag }}"
-        run: |
-          TAG="${TAG_NAME}"
-          if gh release view "$TAG" --json isDraft --jq '.isDraft' \
-              2>/dev/null | grep -q "false"; then
-            echo "Release $TAG is already promoted, skipping promotion"
-            echo "already_promoted=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Release $TAG is draft or doesn't exist, " \
-                 "proceeding with promotion"
-            echo "already_promoted=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 'Promote draft release'
-        id: 'promote-release'
-        if: steps.check-promoted.outputs.already_promoted == 'false'
-        # yamllint disable-line rule:line-length
-        uses: lfreleng-actions/draft-release-promote-action@072990900b99030363d81d4131c2bf2855f07df0  # v0.1.4
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          tag: "${{ needs.tag-validate.outputs.tag }}"
-          latest: true
-
-      - name: 'Set release URL for already promoted release'
-        if: steps.check-promoted.outputs.already_promoted == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          TAG_NAME: "${{ needs.tag-validate.outputs.tag }}"
-        run: |
-          TAG="${TAG_NAME}"
-          RELEASE_URL=$(gh release view "$TAG" --json url --jq '.url')
-          echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
