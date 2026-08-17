@@ -228,8 +228,7 @@ def main():
         for message in stats.errors:
             print(f"  - {message}", file=sys.stderr)
         print(
-            f"\nCompleted with {len(stats.errors)} error(s); "
-            "no existing files were overwritten.",
+            f"\nCompleted with {len(stats.errors)} error(s); no existing files were overwritten.",
             file=sys.stderr,
         )
         sys.exit(1)
