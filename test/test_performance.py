@@ -205,18 +205,22 @@ class TestMemoryUsage:
         gc.collect()
         baseline_blocks = sys.getallocatedblocks()
 
+        found = 0
         for _ in range(iterations):
-            try:
-                cert = nss.find_cert_from_nickname("test_ca")
-                if cert is not None:
-                    # Access properties
-                    subject = cert.subject
-                # Let cert go out of scope
-            except NSPRError:
-                pass
+            cert = nss.find_cert_from_nickname("test_ca")
+            if cert is not None:
+                # Access properties
+                subject = cert.subject
+                found += 1
+            # Let cert go out of scope
 
         # Force garbage collection
         gc.collect()
+
+        # The nss_db_context fixture creates test_ca, so every lookup has to
+        # return a certificate; without this the loop could allocate nothing
+        # and leave the growth check below unable to fail.
+        assert found == iterations, f"Only {found} of {iterations} lookups found test_ca"
 
         # CertificateType carries no Py_TPFLAGS_HAVE_GC, so a retained wrapper
         # never reaches gc.get_objects(); it does cost an allocator block.
