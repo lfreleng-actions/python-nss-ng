@@ -180,6 +180,7 @@ class TestMemoryUsage:
 
         # Force garbage collection
         gc.collect()
+        baseline_blocks = sys.getallocatedblocks()
 
         # Perform many digest operations
         for _ in range(iterations):
@@ -189,8 +190,11 @@ class TestMemoryUsage:
         # Force garbage collection
         gc.collect()
 
-        # Memory should be stable (hard to test directly, but shouldn't crash)
-        assert True
+        # sha256_digest returns bytes, which the cyclic GC does not track, so
+        # count CPython allocator blocks instead: a retained result costs one
+        # block per iteration. Native NSS allocations stay invisible here.
+        growth = sys.getallocatedblocks() - baseline_blocks
+        assert growth < iterations // 10, f"Digest operations leaked {growth} blocks"
 
     @pytest.mark.slow
     def test_certificate_reference_memory(self, nss_db_context):
@@ -199,6 +203,7 @@ class TestMemoryUsage:
 
         # Force garbage collection
         gc.collect()
+        baseline_blocks = sys.getallocatedblocks()
 
         for _ in range(iterations):
             try:
@@ -213,8 +218,10 @@ class TestMemoryUsage:
         # Force garbage collection
         gc.collect()
 
-        # Should not crash or leak
-        assert True
+        # CertificateType carries no Py_TPFLAGS_HAVE_GC, so a retained wrapper
+        # never reaches gc.get_objects(); it does cost an allocator block.
+        growth = sys.getallocatedblocks() - baseline_blocks
+        assert growth < iterations // 10, f"Certificate lookups leaked {growth} blocks"
 
     @pytest.mark.slow
     def test_digest_context_memory(self, nss_db_context):
@@ -223,6 +230,7 @@ class TestMemoryUsage:
 
         # Force garbage collection
         gc.collect()
+        baseline_blocks = sys.getallocatedblocks()
 
         for _ in range(iterations):
             context = nss.create_digest_context(nss.SEC_OID_SHA256)
@@ -235,8 +243,10 @@ class TestMemoryUsage:
         # Force garbage collection
         gc.collect()
 
-        # Should not leak
-        assert True
+        # PK11ContextType is likewise untracked by the cyclic GC; the allocator
+        # block count still rises by one per retained context.
+        growth = sys.getallocatedblocks() - baseline_blocks
+        assert growth < iterations // 10, f"Digest contexts leaked {growth} blocks"
 
 
 class TestStressConditions:
@@ -268,17 +278,16 @@ class TestStressConditions:
     def test_rapid_context_creation_destruction(self, nss_db_context):
         """Test rapid creation and destruction of contexts."""
         iterations = 500
+        expected = nss.sha256_digest(b"test")
 
         for _ in range(iterations):
             context = nss.create_digest_context(nss.SEC_OID_SHA256)
             context.digest_begin()
             context.digest_op(b"test")
             digest = context.digest_final()
-            assert digest is not None
+            # Rapid churn must not carry state between contexts
+            assert digest == expected
             # Context destroyed immediately
-
-        # Should handle rapid churn
-        assert True
 
     @pytest.mark.slow
     def test_large_data_chunks(self, nss_db_context):
@@ -296,13 +305,11 @@ class TestStressConditions:
         """Test many small operations in sequence."""
         iterations = 5000
         test_data = b"small"
+        expected = nss.sha256_digest(test_data)
 
         for _ in range(iterations):
             digest = nss.sha256_digest(test_data)
-            assert digest is not None
-
-        # Should handle many small operations
-        assert True
+            assert digest == expected
 
 
 class TestConcurrentPerformance:

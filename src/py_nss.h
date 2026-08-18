@@ -5,6 +5,8 @@
  * SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
  */
 
+// aislop-ignore-file ai-slop/todo-stub -- maintainer notes carried from upstream python-nss
+
 // FIXME: some of these class types have items in them with arenas, but we can't hold a reference
 //        to an arena, so check to make sure we copy the items out and don't store the
 //        the item with the arena in it.
