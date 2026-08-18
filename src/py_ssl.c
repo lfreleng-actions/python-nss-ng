@@ -5,6 +5,10 @@
  * SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
  */
 
+// aislop-ignore-file ai-slop/todo-stub -- maintainer notes carried from upstream python-nss
+// aislop-ignore-file ai-slop/unreachable-code -- goto targets and the break after return in switch cases
+// aislop-ignore-file complexity/file-too-large -- upstream extension module is a single translation unit
+
 // FIXME: sometimes in the API dist_name is used and sometimes ca_name, make consistent.
 // FIXME: PyIntObjects represent their value as a long, but in many places we declared their C representation as
 //        as int, we should change it to long, and at the same time match the parameters used in the NSPR/NSS API

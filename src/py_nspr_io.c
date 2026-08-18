@@ -5,6 +5,10 @@
  * SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
  */
 
+// aislop-ignore-file ai-slop/todo-stub -- maintainer notes carried from upstream python-nss
+// aislop-ignore-file ai-slop/unreachable-code -- goto targets and the break after return in switch cases
+// aislop-ignore-file complexity/file-too-large -- upstream extension module is a single translation unit
+
 // FIXME: add detail to each set_nspr_error()
 // FIXME: should nspr exception be derived from IOError? Note our detail is IOError's filename
 // FIXME: add factory functions for TCPSocket, UDPSocket

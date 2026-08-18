@@ -12,6 +12,7 @@ import os
 import platform
 import subprocess
 import sys
+import sysconfig
 import tempfile
 
 import pytest
@@ -439,9 +440,8 @@ class TestCrossPlatformCompatibility:
         # Windows: .exe
         if sys.platform.startswith("win"):
             pytest.skip("Windows not supported")
-        else:
-            # Unix systems don't require extension
-            assert True
+
+        assert sysconfig.get_config_var("EXE") == ""
 
 
 if __name__ == "__main__":

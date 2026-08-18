@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2025 The Linux Foundation
+
+# aislop quality gate configuration.
+#
+# The repository scans clean, so hold `aislop ci` at the strictest
+# score the tool offers rather than the default 70.
+#
+# Note the limit of a score gate: aislop normalises the score by file
+# count and rounds it, so a single low-weight finding (a stray
+# python-formatting warning, say) still rounds to 100 and passes.
+# Failing on any finding at all needs a step that gates on the
+# diagnostic count in `aislop scan --json`, not on the score.
+#
+# The C sources under src/ come from upstream python-nss; they carry
+# narrow, per-rule `aislop-ignore-file` directives in place of a blanket
+# exclusion, so every other rule (including the security engine) still
+# runs against them.
+ci:
+  failBelow: 100

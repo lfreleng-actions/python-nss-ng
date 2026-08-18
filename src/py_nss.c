@@ -5,6 +5,10 @@
  * SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
  */
 
+// aislop-ignore-file ai-slop/todo-stub -- maintainer notes carried from upstream python-nss
+// aislop-ignore-file ai-slop/unreachable-code -- goto targets and the break after return in switch cases
+// aislop-ignore-file complexity/file-too-large -- upstream extension module is a single translation unit
+
 #if 0
 
 //Template for new classes

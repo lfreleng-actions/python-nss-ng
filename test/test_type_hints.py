@@ -52,11 +52,12 @@ class TestTypeHints:
     def test_mypy_available(self):
         """Test if mypy is available for type checking."""
         try:
-            import mypy
-
-            assert True  # mypy is available
+            import mypy.api
         except ImportError:
             pytest.skip("mypy not installed - install with: pip install mypy")
+
+        # The stub validation below drives mypy through this entry point
+        assert callable(mypy.api.run)
 
     @pytest.mark.skipif(sys.version_info < (3, 8), reason="Type hints require Python 3.8+")
     def test_mypy_validates_stubs(self, stub_files):
@@ -156,10 +157,11 @@ class TestPythonModuleHints:
 
         try:
             import nss_context
-
-            assert True
         except ImportError:
             pytest.fail("nss_context module not found")
+
+        assert hasattr(nss_context, "NSSContext")
+        assert hasattr(nss_context, "nss_context")
 
     def test_deprecations_has_hints(self):
         """Test that deprecations.py has type hints."""

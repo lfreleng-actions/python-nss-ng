@@ -5,6 +5,9 @@
  * SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
  */
 
+// aislop-ignore-file ai-slop/todo-stub -- maintainer notes carried from upstream python-nss
+// aislop-ignore-file ai-slop/trivial-comment -- upstream decorative section banners
+
 #ifndef NSS_IO_MODULE_H
 #define NSS_IO_MODULE_H
 

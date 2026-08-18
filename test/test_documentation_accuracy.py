@@ -335,19 +335,11 @@ class TestDocumentationCompleteness:
         if not doc_dir.exists():
             pytest.skip("doc directory not found")
 
-        # Look for testing-related docs
-        md_files = list(doc_dir.glob("*.md"))
-        filenames = [f.name.lower() for f in md_files]
+        filenames = sorted(path.name.lower() for path in doc_dir.glob("*.md"))
 
-        # Should have some testing documentation
-        has_test_docs = any("test" in name for name in filenames)
-
-        # This is a soft requirement
-        if has_test_docs:
-            assert True
-        else:
-            # Just document that test docs are recommended
-            pass
+        assert any("test" in name for name in filenames), (
+            f"doc/ should document the test suite, found: {filenames}"
+        )
 
     def test_api_reference_or_stubs_exist(self):
         """Test that API reference or type stubs exist."""
