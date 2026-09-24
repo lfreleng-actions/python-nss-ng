@@ -2994,7 +2994,10 @@ get_oid_tag_from_object(PyObject *obj)
         PyObject *py_obj_string_utf8 = NULL;
         char *type_string;
 
-        py_obj_string_utf8 = PyBaseString_UTF8(obj, "OID Tag");
+        /* A string UTF-8 cannot encode, such as a lone surrogate. */
+        if ((py_obj_string_utf8 = PyBaseString_UTF8(obj, "OID Tag")) == NULL) {
+            return -1;
+        }
 
         if ((type_string = PyBytes_AsString(py_obj_string_utf8)) == NULL) {
             Py_DECREF(py_obj_string_utf8);
@@ -3029,7 +3032,22 @@ get_oid_tag_from_object(PyObject *obj)
         }
 	Py_DECREF(py_obj_string_utf8);
     } else if (PyInteger_Check(obj)) {
-        oid_tag = PyLong_AsLong(obj);
+        long value = PyLong_AsLong(obj);
+
+        if (value == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        /*
+         * Checked before narrowing: a value that fits a long but not an
+         * int would otherwise wrap onto a real tag - (1 << 32) + 41 is
+         * the common name on LP64.
+         */
+        if (value < INT_MIN || value > INT_MAX) {
+            PyErr_Format(PyExc_OverflowError,
+                         "oid tag %ld is out of range", value);
+            return -1;
+        }
+        oid_tag = (int)value;
     } else if (PySecItem_Check(obj)) {
         oid_tag = SECOID_FindOIDTag(&((SecItem *)obj)->item);
     } else {
@@ -3039,6 +3057,42 @@ get_oid_tag_from_object(PyObject *obj)
     }
 
     return oid_tag;
+}
+
+/*
+ * Resolve the key of a membership test - `key in rdn`, `rdn.has_key(key)`
+ * and the DN equivalents - to an OID tag.
+ *
+ * Returns the tag; SEC_OID_UNKNOWN when the key identifies no OID, so
+ * nothing can contain it; or -1 with an exception set for an error the
+ * caller must propagate.
+ *
+ * get_oid_tag_from_object() fails with KeyError for a name that is not
+ * an OID, ValueError for a malformed dotted-decimal OID or a string
+ * UTF-8 cannot encode, and OverflowError for an integer no tag could
+ * be. For a membership test each simply means "not present". A key of
+ * a type that cannot name an OID at all is still a TypeError, and a
+ * failure such as MemoryError still propagates. The integer -1 comes
+ * back as -1 without an exception, and names no OID either.
+ */
+static int
+get_oid_tag_for_membership(PyObject *key)
+{
+    int oid_tag = get_oid_tag_from_object(key);
+
+    if (oid_tag != -1) {
+        return oid_tag;
+    }
+    if (!PyErr_Occurred()) {
+        return SEC_OID_UNKNOWN;
+    }
+    if (PyErr_ExceptionMatches(PyExc_KeyError) ||
+        PyErr_ExceptionMatches(PyExc_ValueError) ||
+        PyErr_ExceptionMatches(PyExc_OverflowError)) {
+        PyErr_Clear();
+        return SEC_OID_UNKNOWN;
+    }
+    return -1;
 }
 
 static bool
@@ -11453,8 +11507,14 @@ RDN_contains(RDN *self, PyObject *arg)
 
     TraceMethodEnter(self);
 
-    oid_tag = get_oid_tag_from_object(arg);
-    if (oid_tag == SEC_OID_UNKNOWN || oid_tag == -1) {
+    /*
+     * The contains slot must return -1 whenever it leaves an exception
+     * set: returning 0 with one pending made `in` raise SystemError.
+     */
+    if ((oid_tag = get_oid_tag_for_membership(arg)) == -1) {
+        return -1;
+    }
+    if (oid_tag == SEC_OID_UNKNOWN) {
         return 0;
     }
 
@@ -11487,10 +11547,13 @@ RDN_has_key(RDN *self, PyObject *args)
                           &arg))
         return NULL;
 
-    if (RDN_contains(self, arg)) {
-        Py_RETURN_TRUE;
-    } else {
+    switch (RDN_contains(self, arg)) {
+    case -1:
+        return NULL;
+    case 0:
         Py_RETURN_FALSE;
+    default:
+        Py_RETURN_TRUE;
     }
 }
 
@@ -12118,8 +12181,14 @@ DN_contains(DN *self, PyObject *arg)
 
     TraceMethodEnter(self);
 
-    oid_tag = get_oid_tag_from_object(arg);
-    if (oid_tag == SEC_OID_UNKNOWN || oid_tag == -1) {
+    /*
+     * The contains slot must return -1 whenever it leaves an exception
+     * set: returning 0 with one pending made `in` raise SystemError.
+     */
+    if ((oid_tag = get_oid_tag_for_membership(arg)) == -1) {
+        return -1;
+    }
+    if (oid_tag == SEC_OID_UNKNOWN) {
         return 0;
     }
 
@@ -12152,10 +12221,13 @@ DN_has_key(DN *self, PyObject *args)
                           &arg))
         return NULL;
 
-    if (DN_contains(self, arg)) {
-        Py_RETURN_TRUE;
-    } else {
+    switch (DN_contains(self, arg)) {
+    case -1:
+        return NULL;
+    case 0:
         Py_RETURN_FALSE;
+    default:
+        Py_RETURN_TRUE;
     }
 }
 
