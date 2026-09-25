@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2010-2025 python-nss-ng contributors
 
 import unittest
+from typing import Any
 
 import nss.nss as nss
 
@@ -337,6 +338,45 @@ class TestCertName(unittest.TestCase):
         self.assertEqual(rdn[1], ou1_ava2)
         self.assertEqual(list(rdn), [ou1_ava1, ou1_ava2])
         self.assertEqual(rdn[:], [ou1_ava1, ou1_ava2])
+
+    def test_contains_key_naming_no_oid(self):
+        # A key that identifies no OID cannot be present. It used to leave
+        # the lookup's KeyError or ValueError set while answering False,
+        # which the interpreter reported as SystemError.
+        name = nss.DN(self.subject_name)
+        rdn = name[0]
+        for container in (name, rdn):
+            # (1 << 32) + tag fits a C long but not an int, and used to
+            # narrow onto that tag.
+            aliases = (
+                (1 << 32) + nss.SEC_OID_AVA_COMMON_NAME,
+                -(1 << 32) + nss.SEC_OID_AVA_COMMON_NAME,
+            )
+            for key in ("Test CA", "not-an-oid", "1.2.x", "\ud800", -1, 2**70, *aliases):
+                self.assertFalse(key in container, key)
+                self.assertTrue(key not in container, key)
+                self.assertFalse(container.has_key(key), key)
+
+    def test_oid_lookup_of_unencodable_string_raises(self):
+        # A string UTF-8 cannot encode used to crash the interpreter.
+        with self.assertRaises(UnicodeEncodeError):
+            nss.oid_tag("\ud800")
+        with self.assertRaises(UnicodeEncodeError):
+            nss.DN(self.subject_name)["\ud800"]
+
+    def test_oid_tag_rejects_integer_outside_int(self):
+        with self.assertRaises(OverflowError):
+            nss.oid_tag((1 << 32) + nss.SEC_OID_AVA_COMMON_NAME)
+
+    def test_contains_rejects_unusable_type(self):
+        # Typed Any: the point is a key of a type has_key does not accept.
+        unusable: Any = 1.5
+        name = nss.DN(self.subject_name)
+        for container in (name, name[0]):
+            with self.assertRaises(TypeError):
+                _ = [] in container
+            with self.assertRaises(TypeError):
+                container.has_key(unusable)
 
 
 if __name__ == "__main__":
