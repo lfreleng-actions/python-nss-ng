@@ -9989,7 +9989,13 @@ Certificate_verify_with_log(Certificate *self, PyObject *args)
                                required_usages, pr_time, pin_args,
                                &py_log->log, &returned_usages) != SECSuccess) {
         Py_DECREF(pin_args);
-        return set_cert_verify_error(returned_usages, (PyObject *)py_log, NULL);
+        /*
+         * The exception takes its own reference to the log; ours is
+         * released either way, or every failed verification leaks it.
+         */
+        set_cert_verify_error(returned_usages, (PyObject *)py_log, NULL);
+        Py_DECREF(py_log);
+        return NULL;
     }
     Py_DECREF(pin_args);
 
