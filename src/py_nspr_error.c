@@ -177,6 +177,31 @@ get_error_desc(long *p_error_code)
     return result;
 }
 
+/*
+ * Raise the exception held in exception_obj, releasing our reference.
+ *
+ * PyErr_SetObject() takes its own reference to the value rather than
+ * stealing ours, so the reference returned by PyObject_Call() must be
+ * dropped here. Without that, every exception raised from C lived for
+ * the rest of the process, and with it its traceback and every frame
+ * and local variable the traceback refers to. A long-lived program that
+ * catches NSPR errors as part of normal control flow - such as
+ * PR_WOULD_BLOCK_ERROR on a non-blocking socket - grew without bound.
+ *
+ * A NULL exception_obj means constructing the exception failed and the
+ * error indicator already describes why, so it is left as it is.
+ */
+static PyObject *
+raise_exception_obj(PyObject *type, PyObject *exception_obj)
+{
+    if (exception_obj == NULL) {
+        return NULL;
+    }
+    PyErr_SetObject(type, exception_obj);
+    Py_DECREF(exception_obj);
+    return NULL;
+}
+
 static PyObject *
 set_nspr_error(const char *format, ...)
 {
@@ -192,11 +217,16 @@ set_nspr_error(const char *format, ...)
     }
 
     if ((kwds = PyDict_New()) == NULL) {
+        Py_XDECREF(error_message);
         return NULL;
     }
 
+    /* PyDict_SetItemString() does not steal the value's reference. */
     if (error_message) {
-        if (PyDict_SetItemString(kwds, "error_message", error_message) != 0) {
+        int rc = PyDict_SetItemString(kwds, "error_message", error_message);
+        Py_DECREF(error_message);
+        if (rc != 0) {
+            Py_DECREF(kwds);
             return NULL;
         }
     }
@@ -204,9 +234,7 @@ set_nspr_error(const char *format, ...)
     exception_obj = PyObject_Call((PyObject *)&NSPRErrorType, empty_tuple, kwds);
     Py_DECREF(kwds);
 
-    PyErr_SetObject((PyObject *)&NSPRErrorType, exception_obj);
-
-    return NULL;
+    return raise_exception_obj((PyObject *)&NSPRErrorType, exception_obj);
 }
 
 static PyObject *
@@ -214,8 +242,10 @@ set_cert_verify_error(unsigned long usages, PyObject *log, const char *format, .
 {
     va_list vargs;
     PyObject *error_message = NULL;
+    PyObject *py_usages = NULL;
     PyObject *kwds = NULL;
     PyObject *exception_obj = NULL;
+    int rc;
 
     if (format) {
         va_start(vargs, format);
@@ -224,30 +254,41 @@ set_cert_verify_error(unsigned long usages, PyObject *log, const char *format, .
     }
 
     if ((kwds = PyDict_New()) == NULL) {
+        Py_XDECREF(error_message);
         return NULL;
     }
 
+    /* PyDict_SetItemString() does not steal the value's reference. */
     if (error_message) {
-        if (PyDict_SetItemString(kwds, "error_message", error_message) != 0) {
-            return NULL;
+        rc = PyDict_SetItemString(kwds, "error_message", error_message);
+        Py_DECREF(error_message);
+        if (rc != 0) {
+            goto fail;
         }
     }
 
-    if (PyDict_SetItemString(kwds, "usages", PyLong_FromLong(usages)) != 0) {
-        return NULL;
+    if ((py_usages = PyLong_FromUnsignedLong(usages)) == NULL) {
+        goto fail;
+    }
+    rc = PyDict_SetItemString(kwds, "usages", py_usages);
+    Py_DECREF(py_usages);
+    if (rc != 0) {
+        goto fail;
     }
 
     if (log) {
         if (PyDict_SetItemString(kwds, "log", log) != 0) {
-            return NULL;
+            goto fail;
         }
     }
 
     exception_obj = PyObject_Call((PyObject *)&CertVerifyErrorType, empty_tuple, kwds);
     Py_DECREF(kwds);
 
-    PyErr_SetObject((PyObject *)&CertVerifyErrorType, exception_obj);
+    return raise_exception_obj((PyObject *)&CertVerifyErrorType, exception_obj);
 
+ fail:
+    Py_DECREF(kwds);
     return NULL;
 }
 
@@ -515,29 +556,44 @@ NSPRError_init(NSPRError *self, PyObject *args, PyObject *kwds)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O&O&:NSPRError", kwlist,
                                      UnicodeOrNoneConvert, &error_message,
-                                     LongOrNoneConvert, &error_code))
+                                     LongOrNoneConvert, &error_code)) {
+        /*
+         * UnicodeOrNoneConvert hands back a new reference; a later
+         * argument failing to parse must not strand it.
+         */
+        Py_XDECREF(error_message);
         return -1;
+    }
 
-    error_desc = get_error_desc(&error_code);
+    /*
+     * Both get_error_desc() and PyUnicode_FromFormat() return a new
+     * reference, which the attributes below take over. Adding another
+     * one on top leaked both strings with every exception raised.
+     */
+    if ((error_desc = get_error_desc(&error_code)) == NULL) {
+        Py_XDECREF(error_message);
+        return -1;
+    }
 
     if (error_message) {
         str_value = PyUnicode_FromFormat("%U: %U", error_message, error_desc);
+        Py_DECREF(error_message);
+        if (str_value == NULL) {
+            Py_DECREF(error_desc);
+            return -1;
+        }
     } else {
         str_value = error_desc;
+        Py_INCREF(str_value);
     }
-
 
     Py_CLEAR(self->str_value);
     self->str_value = str_value;
-    Py_XINCREF(self->str_value);
 
     Py_CLEAR(self->error_desc);
     self->error_desc = error_desc;
-    Py_XINCREF(self->error_desc);
 
     self->error_code = error_code;
-
-    Py_XDECREF(error_message);
 
     return 0;
 }
@@ -690,8 +746,14 @@ CertVerifyError_init(CertVerifyError *self, PyObject *args, PyObject *kwds)
                                      UnicodeOrNoneConvert, &error_message,
                                      LongOrNoneConvert, &error_code,
                                      &usages,
-                                     &log))
+                                     &log)) {
+        /*
+         * UnicodeOrNoneConvert hands back a new reference; a later
+         * argument failing to parse must not strand it.
+         */
+        Py_XDECREF(error_message);
         return -1;
+    }
 
     if ((super_kwds = PyDict_New()) == NULL) {
         Py_XDECREF(error_message);
@@ -705,15 +767,21 @@ CertVerifyError_init(CertVerifyError *self, PyObject *args, PyObject *kwds)
         }
     }
     if (error_code != -1) {
-        if (PyDict_SetItemString(super_kwds, "error_code", PyLong_FromLong(error_code)) != 0) {
+        /* PyDict_SetItemString() does not steal the value's reference. */
+        PyObject *py_error_code = PyLong_FromLong(error_code);
+        int rc = py_error_code == NULL ? -1 :
+            PyDict_SetItemString(super_kwds, "error_code", py_error_code);
+        Py_XDECREF(py_error_code);
+        if (rc != 0) {
             Py_XDECREF(error_message);
             Py_DECREF(super_kwds);
             return -1;
         }
     }
-    if ((result = CertVerifyErrorType.tp_base->tp_init((PyObject *)self, empty_tuple, super_kwds)) != 0) {
+    result = CertVerifyErrorType.tp_base->tp_init((PyObject *)self, empty_tuple, super_kwds);
+    Py_DECREF(super_kwds);
+    if (result != 0) {
         Py_XDECREF(error_message);
-        Py_DECREF(super_kwds);
         return result;
     }
 

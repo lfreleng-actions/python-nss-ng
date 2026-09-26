@@ -219,7 +219,14 @@ class TestNSSContextWithDatabase:
             # Try to find a certificate
             try:
                 cert = nss.find_cert_from_nickname("test_ca")
-                assert cert is not None
+                try:
+                    assert cert is not None
+                finally:
+                    # Released before the context shuts NSS down, on
+                    # every path: NSS refuses to shut down while a
+                    # certificate is still referenced, and destroying one
+                    # afterwards crashes the next initialisation.
+                    del cert
             except NSPRError:
                 # Certificate might not exist, but database access works
                 pass
@@ -487,13 +494,17 @@ class TestNSSContextRealWorld:
 
         with NSSContext(db_name=db_path):
             certdb = nss.get_default_certdb()
+            assert certdb is not None
 
-            # Try to list certificates
+            cert = nss.find_cert_from_nickname("test_ca")
             try:
-                certs = certdb.find_certs_by_subject("")
-            except NSPRError:
-                # May fail depending on database content
-                pass
+                assert "CN=Test CA" in str(cert.subject)
+            finally:
+                # Released before the context shuts NSS down, which NSS
+                # refuses while a certificate is still referenced - on
+                # every path, since a failed assertion's traceback would
+                # otherwise keep it alive through the shutdown.
+                del cert
 
     def test_digest_operation_in_context(self):
         """Test performing digest operations within context."""

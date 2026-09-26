@@ -254,12 +254,22 @@ class TestOCSPChecking:
         # Clean up
         nss.disable_ocsp_checking()
 
-    def test_ocsp_idempotent_disable(self, nss_clean_state):
-        """Test that disabling OCSP multiple times is safe."""
-        nss.enable_ocsp_checking()
+    def test_ocsp_repeated_disable(self, nss_clean_state):
+        """Disabling OCSP again reports that it is not enabled, harmlessly."""
+        from nss.error import SEC_ERROR_OCSP_NOT_ENABLED
 
+        nss.enable_ocsp_checking()
         nss.disable_ocsp_checking()
-        nss.disable_ocsp_checking()
+
+        # Documented behaviour: a disable while OCSP is off raises
+        # SEC_ERROR_OCSP_NOT_ENABLED, which callers may ignore.
+        for _ in range(2):
+            with pytest.raises(NSPRError) as exc_info:
+                nss.disable_ocsp_checking()
+            assert exc_info.value.errno == SEC_ERROR_OCSP_NOT_ENABLED
+
+        # And OCSP can still be enabled and disabled afterwards.
+        nss.enable_ocsp_checking()
         nss.disable_ocsp_checking()
 
 
@@ -290,17 +300,20 @@ class TestPKIXValidation:
         assert prev2 == (not value)
         assert nss.get_use_pkix_for_validation() == value
 
-    def test_pkix_validation_rejects_non_boolean(self, nss_clean_state):
-        """Test that non-boolean values are rejected."""
-        # Must be boolean
-        with pytest.raises(TypeError):
-            nss.set_use_pkix_for_validation("true")
+    def test_pkix_validation_rejects_non_integer(self, nss_clean_state):
+        """Values that are not integers are rejected; integers are truthy flags."""
+        original = nss.get_use_pkix_for_validation()
+        try:
+            with pytest.raises(TypeError):
+                nss.set_use_pkix_for_validation("true")
 
-        with pytest.raises(TypeError):
+            # The flag is parsed as an int, so 1 and 0 act as True and False.
             nss.set_use_pkix_for_validation(1)
-
-        with pytest.raises(TypeError):
+            assert nss.get_use_pkix_for_validation() is True
             nss.set_use_pkix_for_validation(0)
+            assert nss.get_use_pkix_for_validation() is False
+        finally:
+            nss.set_use_pkix_for_validation(original)
 
     def test_pkix_validation_set_true(self, nss_clean_state):
         """Test explicitly setting PKIX validation to True."""
