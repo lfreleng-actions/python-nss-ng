@@ -4,6 +4,10 @@
 
 ci:
   autofix_prs: false
+  # basedpyright: the hook needs typing modules (pytest, hypothesis,
+  # mypy) to resolve the test imports, and any additional_dependencies
+  # exceed pre-commit.ci's 250 MiB per-hook limit (the bare hook alone
+  # is 248.7 MiB), so it runs locally only.
   skip: [pytest, gha-workflow-linter, basedpyright]
   autofix_commit_msg: |
     Chore: pre-commit autofixes
@@ -110,6 +114,20 @@ repos:
     rev: 706e6acebe9e88c2c28d1527d3085a14b11794c4  # frozen: 1.40.1
     hooks:
       - id: basedpyright
+        # Third-party modules the scanned code imports, pinned to uv.lock,
+        # so imports resolve; typings/ stubs cover the compiled nss module
+        additional_dependencies:
+          - hypothesis==6.155.1
+          - mypy==2.1.0
+          - pytest==9.0.3
+        # Analyse the whole scope, not just the staged files
+        pass_filenames: false
+        # Run even when no Python file is staged (deletions, config edits)
+        always_run: true
+        # Stop always_run from also running the hook at commit-msg
+        stages: [pre-commit]
+        # Fail on warnings too; targets match [tool.basedpyright] include
+        args: [--warnings, src, test, scripts, typings, import_files.py]
 
   - repo: https://github.com/python-jsonschema/check-jsonschema.git
     rev: 4f85d46a92dc17713078e5de73f8a13190edf6fc  # frozen: 0.38.2

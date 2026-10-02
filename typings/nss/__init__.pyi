@@ -4,6 +4,7 @@
 """Type stub package for the nss namespace.
 
 Provides a package layout (nss/) so static type checkers can resolve
-``nss.nss``, ``nss.ssl`` and ``nss.io`` submodules. The actual stubs
-are symlinks back into ``src/`` to avoid duplication.
+``nss.nss``, ``nss.ssl`` and ``nss.io`` submodules, plus the
+pure-Python modules installed alongside them. Except for ``error.pyi``,
+the modules are symlinks back into ``src/`` to avoid duplication.
 """

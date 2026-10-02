@@ -21,7 +21,7 @@ SPDX-FileCopyrightText = "2025 The Linux Foundation"
 # cannot easily carry inline SPDX headers.
 [[annotations]]
 path = [
-         "pyrightconfig.json",
+
          ".git_archival.txt",
          "scripts/README.md",
          "doc/ChangeLog",
