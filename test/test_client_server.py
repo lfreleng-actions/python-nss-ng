@@ -187,6 +187,7 @@ def client(request, test_port):
         print('client: could not resolve host address "%s"' % hostname, file=sys.stderr)
         return None
 
+    sock = None
     for net_addr in addr_info:
         net_addr.port = test_port
 
@@ -220,7 +221,12 @@ def client(request, test_port):
             break
         except Exception as e:
             sock.close()
+            sock = None
             print("client: connection to: %s failed (%s)" % (net_addr, e), file=sys.stderr)
+
+    if sock is None:
+        print('client: could not connect to "%s"' % hostname, file=sys.stderr)
+        return None
 
     # Talk to the server
     try:

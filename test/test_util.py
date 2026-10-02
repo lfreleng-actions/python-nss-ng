@@ -9,6 +9,7 @@ including path finding, build directory detection, and temporary file handling.
 """
 
 import os
+import subprocess
 import sys
 import tempfile
 
@@ -285,8 +286,6 @@ class TestUtilIntegration:
             certutil_path = util.find_nss_tool("certutil")
 
             # Verify we can check version (tool is executable)
-            import subprocess
-
             result = subprocess.run([certutil_path, "-H"], capture_output=True, timeout=5)
 
             # Should execute without error

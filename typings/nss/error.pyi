@@ -27,7 +27,6 @@ from typing import Any, List, Tuple
 # Exception classes
 # ---------------------------------------------------------------------------
 
-
 class NSPRError(Exception):
     """Base exception for NSPR / NSS errors.
 
@@ -46,9 +45,7 @@ class NSPRError(Exception):
     error_message: str
 
     def __init__(self, *args: Any) -> None: ...
-
     def __str__(self) -> str: ...
-
 
 class CertVerifyError(NSPRError):
     """Exception raised when certificate verification fails.
@@ -67,11 +64,9 @@ class CertVerifyError(NSPRError):
 
     def __init__(self, *args: Any) -> None: ...
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def nspr_error_name(errno: int) -> str:
     """Return the symbolic name (e.g. ``"PR_END_OF_FILE_ERROR"``)
@@ -79,13 +74,11 @@ def nspr_error_name(errno: int) -> str:
     is not recognised by NSPR / NSS."""
     ...
 
-
 def nspr_error_string(errno: int) -> str:
     """Return the human-readable description string associated with
     ``errno``, or a generic placeholder if the code is not recognised
     by NSPR / NSS."""
     ...
-
 
 def lookup_nspr_error(errno: int) -> Tuple[int, str, str] | None:
     """Look up an NSPR / NSS error code.
@@ -94,7 +87,6 @@ def lookup_nspr_error(errno: int) -> Tuple[int, str, str] | None:
     otherwise ``None``.
     """
     ...
-
 
 # ---------------------------------------------------------------------------
 # Dynamic constants
