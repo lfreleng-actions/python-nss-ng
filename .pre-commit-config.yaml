@@ -60,12 +60,14 @@ repos:
     hooks:
       # Root-level scripts are included alongside src/test/scripts so
       # they cannot drift out of format; doc/examples and mutants stay
-      # excluded (legacy Py2-era sources and generated mutants).
+      # excluded (legacy Py2-era sources and generated mutants). The
+      # .pyi stubs for the compiled extension (src/ and typings/) are
+      # shipped code, so they are linted too.
       - id: ruff
-        files: ^((src|test|scripts)/.+|[^/]+)\.py$
+        files: ^((src|test|scripts|typings)/.+|[^/]+)\.pyi?$
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-        files: ^((src|test|scripts)/.+|[^/]+)\.py$
+        files: ^((src|test|scripts|typings)/.+|[^/]+)\.pyi?$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: 7ff8d35ae36a7d2b968f2f90b4c723e292e594ee  # frozen: v2.3.1
