@@ -303,6 +303,39 @@ disable_error_code = [
     "call-arg",
 ]
 
+[tool.basedpyright]
+# Minimum supported Python, from requires-python
+pythonVersion = "3.10"
+pythonPlatform = "All"
+typeCheckingMode = "standard"
+# Scope a bare ``basedpyright`` run and the editor's language server to
+# the same targets the pre-commit hook passes explicitly. As for ruff,
+# doc/examples (legacy Py2-era scripts) and mutants (generated) stay out.
+include = ["src", "test", "scripts", "typings", "import_files.py"]
+# These typings/nss/ entries are symlinks into src/, which is already
+# analysed; scanning them again would report each finding twice
+exclude = [
+    "typings/nss/deprecations.py",
+    "typings/nss/io.pyi",
+    "typings/nss/nss.pyi",
+    "typings/nss/nss_context.py",
+    "typings/nss/secure_logging.py",
+    "typings/nss/ssl.pyi",
+]
+# Stubs for the compiled extension: typings/nss/ gives the src/*.pyi
+# stubs the ``nss`` package layout they are installed under
+stubPath = "typings"
+# Tests put src/ on sys.path and import its pure-Python modules
+# (deprecations, nss_context, secure_logging) by bare name
+executionEnvironments = [
+    { root = "test", extraPaths = ["src"] },
+]
+# The compiled extension (nss.nss, nss.io, nss.ssl, nss.error) is
+# built from C by meson and cannot be installed into the hook's
+# environment, so every import of it finds the typings/ stub but no
+# module source by design; the stubs supply the types
+reportMissingModuleSource = false
+
 [tool.mutmut]
 paths_to_mutate = "src/deprecations.py:src/secure_logging.py:src/nss_context.py"
 backup = false
