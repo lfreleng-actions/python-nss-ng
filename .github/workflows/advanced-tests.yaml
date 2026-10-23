@@ -11,7 +11,10 @@ name: 'Advanced Tests'
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, reopened, edited, synchronize]
+    # 'edited' is deliberately omitted: a title/body edit does not change
+    # the head commit, so it would only rerun the same tests and cancel
+    # the in-progress run, leaving a cancelled check on the head commit.
+    types: [opened, reopened, synchronize]
     branches:
       - main
       - master
