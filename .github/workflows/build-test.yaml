@@ -42,7 +42,7 @@ jobs:
       contents: read
       pull-requests: read  # Read PR context for the reusable workflow
     # yamllint disable-line rule:line-length
-    uses: lfreleng-actions/python-workflows/.github/workflows/build-test-multiarch.yaml@86d108b8dd7d99f6f5dee747863bd439d1468ff2  # v0.5.2
+    uses: lfreleng-actions/python-workflows/.github/workflows/build-test-multiarch.yaml@35c9ad2eaa46d852487fc97a93207e6dd73e088d  # v0.5.4
     with:
       # Build NSS/NSPR from source during the python-build step.
       make: true
