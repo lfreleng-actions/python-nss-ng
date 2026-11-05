@@ -302,7 +302,7 @@ NSS-Dependent Tests:    ~182 (requires C extension)
 **Advanced Tests** (`.github/workflows/advanced-tests.yaml`):
 
 - Runs on every PR/push
-- Pure Python tests (Python 3.10-3.13)
+- Pure Python tests (Python 3.11-3.15)
 - Property-based tests
 - Thread safety tests
 - Type checking

@@ -51,9 +51,9 @@ class TestPlatformDetection:
         """Test that Python version is supported."""
         version_info = sys.version_info
 
-        # Should be Python 3.10+
+        # Should be Python 3.11+
         assert version_info.major == 3, "Python 3 required"
-        assert version_info.minor >= 10, "Python 3.10+ required"
+        assert version_info.minor >= 11, "Python 3.11+ required"
 
 
 class TestMacOSSpecific:

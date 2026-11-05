@@ -34,7 +34,7 @@ brew install nss nspr pkg-config
 
 ### Python Requirements
 
-- Python 3.10 or later
+- Python 3.11 or later
 - pip or uv package manager
 
 ## Quick Setup
@@ -50,7 +50,7 @@ git clone https://github.com/lfreleng-actions/python-nss-ng.git
 cd python-nss-ng
 
 # Create virtual environment and install dependencies
-uv venv --python 3.10
+uv venv --python 3.11
 source .venv/bin/activate  # Linux/macOS
 # or
 .venv\Scripts\activate  # Windows
@@ -78,7 +78,7 @@ pip install -e ".[dev]"
 
 ```bash
 # Check Python version
-python --version  # Should be 3.10+
+python --version  # Should be 3.11+
 
 # Check NSS/NSPR installation
 pkg-config --modversion nss
