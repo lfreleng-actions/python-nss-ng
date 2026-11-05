@@ -13,7 +13,7 @@ project to bring it up to current Python packaging standards (2025).
 The python-nss-ng project was originally built with the legacy
 `distutils` build system. This migration updates the project to:
 
-- Support Python 3.10+ (3.10, 3.11, 3.12, 3.13, 3.14)
+- Support Python 3.11+ (3.11, 3.12, 3.13, 3.14, 3.15)
 - Use modern packaging standards (PEP 517, PEP 518, PEP 621)
 - Use dynamic versioning from git tags
 - Support modern development tools (uv, pytest, ruff)
@@ -53,7 +53,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "python-nss-ng"
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # ... modern metadata
 ```
 
@@ -155,7 +155,7 @@ dev = [
 
 #### Modern Support
 
-- Explicit support: Python 3.10, 3.11, 3.12, 3.13, 3.14
+- Explicit support: Python 3.11, 3.12, 3.13, 3.14, 3.15
 - Modern `setuptools` build backend
 - Compatible with PEP 517/518 build frontends (pip, build, uv)
 
@@ -216,7 +216,7 @@ addopts = ["-v", "--strict-markers", "--tb=short"]
 ```toml
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "C4", "UP"]
@@ -270,7 +270,7 @@ branch = true
 
 ```bash
 # Development environment
-uv venv --python 3.10
+uv venv --python 3.11
 source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
@@ -293,7 +293,7 @@ python -m build
 
 ### Breaking Changes
 
-- **Lower Bound Python version**: Now requires Python 3.10+
+- **Lower Bound Python version**: Now requires Python 3.11+
 - **Build system**: `python setup.py install` no longer recommended
 - **Import changes**: None (backward compatible)
 

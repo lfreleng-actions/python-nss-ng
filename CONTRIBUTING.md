@@ -37,7 +37,7 @@ Please be respectful and constructive in all interactions.
 
 ### Prerequisites
 
-- Python 3.10 or later
+- Python 3.11 or later
 - NSS 3.100+ development libraries
 - NSPR 4.35+ development libraries
 - pkg-config
@@ -79,7 +79,7 @@ across different platforms and distributions.
 
 - Fedora Linux (x86_64 and aarch64) with NSS 3.117+
 - macOS (Apple Silicon) with Homebrew NSS/NSPR
-- Python versions: 3.10, 3.11, 3.12, 3.14 (Linux), 3.10-3.14 (macOS)
+- Python versions: 3.11, 3.12, 3.14, 3.15 (Linux), 3.11-3.15 (macOS)
 
 **When it runs:**
 
@@ -153,8 +153,8 @@ security scanning, and quality checks.
 └───────────┬─────────────────────────────────────────────────┘
             │
             ├──► compatibility.yaml (Platform Testing)
-            │    ├─ Fedora x64 + ARM64 (Python 3.10-3.14)
-            │    └─ macOS ARM64 (Python 3.10-3.14)
+            │    ├─ Fedora x64 + ARM64 (Python 3.11-3.15)
+            │    └─ macOS ARM64 (Python 3.11-3.15)
             │
             └──► build-test.yaml (Production CI/CD)
                  ├─ Extract metadata

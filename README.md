@@ -7,7 +7,7 @@ SPDX-FileCopyrightText: 2025 The Linux Foundation
 
 [![Platform Compatibility](https://github.com/lfreleng-actions/python-nss-ng/actions/workflows/compatibility.yaml/badge.svg)](https://github.com/lfreleng-actions/python-nss-ng/actions/workflows/compatibility.yaml)
 [![CI/CD Pipeline](https://github.com/lfreleng-actions/python-nss-ng/actions/workflows/build-test.yaml/badge.svg)](https://github.com/lfreleng-actions/python-nss-ng/actions/workflows/build-test.yaml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
 Python bindings for Network Security Services (NSS) and Netscape Portable
@@ -42,7 +42,7 @@ and build standards:
 
 ### Changes Made
 
-- **Python Support**: Now supports Python 3.10, 3.11, 3.12, 3.13, and 3.14
+- **Python Support**: Now supports Python 3.11, 3.12, 3.13, 3.14, and 3.15
 - **Build System**: Migrated from legacy `distutils` to modern `setuptools`
   with `pyproject.toml`
 - **Version Management**: Implemented dynamic versioning using
@@ -67,7 +67,7 @@ works with NSS 3.117.
 
 - NSS 3.117
 - NSPR 4.38.2
-- Python 3.10, 3.11, 3.12, 3.13, 3.14
+- Python 3.11, 3.12, 3.13, 3.14, 3.15
 
 ## System Requirements
 
@@ -99,8 +99,8 @@ brew install nss nspr
 ### Using uv (Recommended)
 
 ```bash
-# Create a virtual environment with Python 3.10+
-uv venv --python 3.10
+# Create a virtual environment with Python 3.11+
+uv venv --python 3.11
 
 # Activate the environment
 source .venv/bin/activate  # Linux/macOS
