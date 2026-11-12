@@ -8,8 +8,8 @@
 set -euo pipefail
 
 # Configuration
-NSS_VERSION="${NSS_VERSION:-3.118}"
-NSPR_VERSION="${NSPR_VERSION:-4.37}"
+NSS_VERSION="${NSS_VERSION:-3.133}"
+NSPR_VERSION="${NSPR_VERSION:-4.39}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-/usr}"
 BUILD_DIR="${BUILD_DIR:-$HOME/nss-build}"
 
@@ -80,11 +80,11 @@ verify_checksum() {
 get_nss_checksum() {
     local version="$1"
     case "$version" in
+        3.133)
+            echo "4d752526b9846a1d962588cfbd09b7cc2a4f6a4effbd9157d58a30e8a2573065"
+            ;;
         3.118)
             echo "06f2d34c7c421da430b9d78fc6590105500b9439efa19cdaa0a57ed7dc948aad"
-            ;;
-        3.117)
-            echo "5786b523a2f2e9295ed10d711960d2e33cd620bb80d6288443eda43553a51996"
             ;;
         *)
             echo ""  # Return empty for unknown versions - will trigger warning
@@ -95,11 +95,11 @@ get_nss_checksum() {
 get_nspr_checksum() {
     local version="$1"
     case "$version" in
+        4.39)
+            echo "bbd02ee87a55676063a63e5bc819e0227de2666b47307b2a0134414cdf42368e"
+            ;;
         4.37)
             echo "5f9344ed0e31855bd38f88b33c9d9ab94f70ce547ef3213e488d1520f61840fa"
-            ;;
-        4.36)
-            echo "55dec317f1401cd2e5dba844d340b930ab7547f818179a4002bce62e6f1c6895"
             ;;
         *)
             echo ""  # Return empty for unknown versions - will trigger warning

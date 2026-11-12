@@ -21,13 +21,13 @@ help:
 	@echo "  clean              - Clean build artifacts"
 	@echo ""
 	@echo "Environment variables:"
-	@echo "  NSS_VERSION        - NSS version (default: 3.118)"
-	@echo "  NSPR_VERSION       - NSPR version (default: 4.37)"
+	@echo "  NSS_VERSION        - NSS version (default: 3.133)"
+	@echo "  NSPR_VERSION       - NSPR version (default: 4.39)"
 	@echo "  INSTALL_PREFIX     - Install prefix (default: /usr)"
 
 # Configuration
-NSS_VERSION ?= 3.118
-NSPR_VERSION ?= 4.37
+NSS_VERSION ?= 3.133
+NSPR_VERSION ?= 4.39
 INSTALL_PREFIX ?= /usr
 PKG_CONFIG_PATH := $(INSTALL_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
 LD_LIBRARY_PATH := $(INSTALL_PREFIX)/lib:$(LD_LIBRARY_PATH)

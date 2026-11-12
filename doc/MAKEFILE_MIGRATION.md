@@ -58,8 +58,8 @@ Created identical Makefiles for both repositories with the following targets:
 **Configuration Variables:**
 
 ```makefile
-NSS_VERSION ?= 3.118
-NSPR_VERSION ?= 4.37
+NSS_VERSION ?= 3.133
+NSPR_VERSION ?= 4.39
 INSTALL_PREFIX ?= /usr
 ```
 
