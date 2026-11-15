@@ -154,16 +154,11 @@ class TestLinuxSpecific:
     @pytest.mark.skipif(sys.platform != "linux", reason="Linux only")
     def test_linux_distribution_detected(self):
         """Test that Linux distribution can be detected."""
-        # Get distribution info (Python 3.10+ has platform.freedesktop_os_release)
         try:
-            import platform
-
-            if hasattr(platform, "freedesktop_os_release"):
-                os_release = platform.freedesktop_os_release()
-                assert "NAME" in os_release or "ID" in os_release
-        except (AttributeError, OSError):
-            # May not be available on all systems
-            pass
+            os_release = platform.freedesktop_os_release()
+        except OSError as e:
+            pytest.skip(f"No os-release file on this host: {e}")
+        assert "NAME" in os_release or "ID" in os_release
 
     @pytest.mark.skipif(sys.platform != "linux", reason="Linux only")
     def test_linux_library_paths(self):

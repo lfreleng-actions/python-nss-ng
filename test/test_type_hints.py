@@ -59,7 +59,6 @@ class TestTypeHints:
         # The stub validation below drives mypy through this entry point
         assert callable(mypy.api.run)
 
-    @pytest.mark.skipif(sys.version_info < (3, 8), reason="Type hints require Python 3.8+")
     def test_mypy_validates_stubs(self, stub_files):
         """Test that mypy validates stub files without errors."""
         try:
