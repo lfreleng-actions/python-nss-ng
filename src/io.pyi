@@ -8,7 +8,7 @@ This file provides type hints for the C extension module nss.io (NSPR I/O).
 """
 
 import socket
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 # Time conversion utilities
 def seconds_to_interval(seconds: float) -> int:
@@ -126,7 +126,7 @@ class NetworkAddress:
 
     def __init__(
         self,
-        addr: Union[str, int, Tuple[str, int], None] = None,
+        addr: str | int | tuple[str, int] | None = None,
         port: int = 0,
         family: int = PR_AF_INET,
     ) -> None:
@@ -190,16 +190,16 @@ class HostEntry:
         ...
 
     @property
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """Get list of hostname aliases."""
         ...
 
     @property
-    def addresses(self) -> List[NetworkAddress]:
+    def addresses(self) -> list[NetworkAddress]:
         """Get list of network addresses."""
         ...
 
-    def get_network_addresses(self, family: int = PR_AF_INET) -> List[NetworkAddress]:
+    def get_network_addresses(self, family: int = PR_AF_INET) -> list[NetworkAddress]:
         """Get network addresses filtered by family."""
         ...
 
@@ -323,7 +323,7 @@ class Socket:
         """
         ...
 
-    def accept(self, timeout: int | None = None) -> Tuple[Socket, NetworkAddress]:
+    def accept(self, timeout: int | None = None) -> tuple[Socket, NetworkAddress]:
         """
         Accept an incoming connection.
 
@@ -371,7 +371,7 @@ class Socket:
 
     def recvfrom(
         self, bufsize: int, flags: int = 0, timeout: int | None = None
-    ) -> Tuple[bytes, NetworkAddress]:
+    ) -> tuple[bytes, NetworkAddress]:
         """
         Receive data and sender address (UDP).
 
@@ -435,7 +435,7 @@ class Socket:
         """Read a line from socket."""
         ...
 
-    def readlines(self, sizehint: int = -1, timeout: int | None = None) -> List[bytes]:
+    def readlines(self, sizehint: int = -1, timeout: int | None = None) -> list[bytes]:
         """Read lines from socket."""
         ...
 
@@ -445,7 +445,7 @@ class Socket:
 
     def accept_read(
         self, buf_size: int = 4096, timeout: int | None = None
-    ) -> Tuple[Socket, NetworkAddress, bytes]:
+    ) -> tuple[Socket, NetworkAddress, bytes]:
         """Accept connection and read data in one operation."""
         ...
 
@@ -454,14 +454,14 @@ class Socket:
         ...
 
     @staticmethod
-    def new_tcp_pair() -> Tuple[Socket, Socket]:
+    def new_tcp_pair() -> tuple[Socket, Socket]:
         """Create a pair of connected TCP sockets."""
         ...
 
     @staticmethod
     def poll(
-        poll_desc_list: List[Tuple[Socket, int, int]], timeout: int | None = None
-    ) -> List[Tuple[Socket, int, int]]:
+        poll_desc_list: list[tuple[Socket, int, int]], timeout: int | None = None
+    ) -> list[tuple[Socket, int, int]]:
         """Poll multiple sockets for I/O events."""
         ...
 

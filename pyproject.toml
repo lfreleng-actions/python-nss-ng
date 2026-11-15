@@ -176,9 +176,6 @@ ignore = [
     "C901",  # too complex
     "S101",  # assert detected (allow in tests)
     "T201",  # print found (intentional in examples)
-    "UP006", # Use `X` instead of `typing.X` for type annotations (Python 3.10 compat)
-    "UP007", # Use `X | Y` for union types (Python 3.10 compat)
-    "UP035", # Import from `typing` is deprecated (Python 3.10 compat)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -247,7 +244,9 @@ ignore = [
     "UP024",  # replace aliased exceptions with builtins
     "UP032",  # use f-string instead of format
 ]
-"test/setup_certs.py" = ["S603", "S607"]  # Allow subprocess calls in cert setup
+# Allow subprocess calls in cert setup. UP006/UP035 stay ignored here
+# until someone can edit this executable file to use `list`/`tuple`.
+"test/setup_certs.py" = ["S603", "S607", "UP006", "UP035"]
 # Build-time version helper that shells out to the trusted `git` binary.
 "scripts/meson-version.py" = ["S603", "S607"]
 
