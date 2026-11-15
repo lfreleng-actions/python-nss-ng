@@ -8,7 +8,8 @@ This file provides type hints for the C extension module nss.ssl.
 """
 
 import socket
-from typing import Any, Callable, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 # SSL Policy
 def set_domestic_policy() -> None:
@@ -54,12 +55,12 @@ def get_cipher_policy(cipher: int) -> int:
 # Functions returning a version range accept the optional ``repr_kind``
 # keyword argument (one of the ``nss.As*`` constants) to control how
 # the returned tuple members are represented.
-def get_default_ssl_version_range(repr_kind: int = ...) -> Tuple[Any, Any]:
+def get_default_ssl_version_range(repr_kind: int = ...) -> tuple[Any, Any]:
     """Get the default SSL/TLS version range."""
     ...
 
 def set_default_ssl_version_range(
-    min_version: Union[int, str], max_version: Union[int, str], variant: int = 0
+    min_version: int | str, max_version: int | str, variant: int = 0
 ) -> None:
     """Set the default SSL/TLS version range.
 
@@ -69,7 +70,7 @@ def set_default_ssl_version_range(
     """
     ...
 
-def get_supported_ssl_version_range(repr_kind: int = ...) -> Tuple[Any, Any]:
+def get_supported_ssl_version_range(repr_kind: int = ...) -> tuple[Any, Any]:
     """Get the supported SSL/TLS version range."""
     ...
 
@@ -305,8 +306,8 @@ class SSLSocket:
 
     def set_ssl_version_range(
         self,
-        min_version: Union[int, str],
-        max_version: Union[int, str],
+        min_version: int | str,
+        max_version: int | str,
     ) -> None:
         """
         Set the SSL/TLS version range for this socket.
@@ -321,7 +322,7 @@ class SSLSocket:
         """
         ...
 
-    def get_ssl_version_range(self, repr_kind: int = ...) -> Tuple[Any, Any]:
+    def get_ssl_version_range(self, repr_kind: int = ...) -> tuple[Any, Any]:
         """
         Get the SSL/TLS version range.
 
@@ -368,7 +369,7 @@ class SSLSocket:
         """Check if data is pending on the socket."""
         ...
 
-    def get_security_status(self) -> Tuple[int, str, int, int, str, str, str]:
+    def get_security_status(self) -> tuple[int, str, int, int, str, str, str]:
         """Get security status information."""
         ...
 
@@ -454,7 +455,7 @@ class SSLSocket:
         """Listen for connections."""
         ...
 
-    def accept(self, timeout: int | None = None) -> Tuple[SSLSocket, Any]:
+    def accept(self, timeout: int | None = None) -> tuple[SSLSocket, Any]:
         """
         Accept an incoming connection.
 

@@ -3,7 +3,7 @@
 
 """Common exceptions for python-nss-ng test utilities."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 
 class PythonNSSError(Exception):

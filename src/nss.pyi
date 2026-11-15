@@ -7,7 +7,8 @@ Type stubs for nss.nss module.
 This file provides type hints for the C extension module nss.nss.
 """
 
-from typing import Any, Callable, List, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 # Version information
 def nss_get_version() -> str:
@@ -58,11 +59,11 @@ def find_cert_from_nickname(nickname: str, *pin_args: Any) -> Certificate:
     """Find a certificate by its nickname."""
     ...
 
-def find_certs_from_nickname(nickname: str, *pin_args: Any) -> List[Certificate]:
+def find_certs_from_nickname(nickname: str, *pin_args: Any) -> list[Certificate]:
     """Find all certificates with the given nickname."""
     ...
 
-def find_certs_from_email_addr(email: str, *pin_args: Any) -> List[Certificate]:
+def find_certs_from_email_addr(email: str, *pin_args: Any) -> list[Certificate]:
     """Find certificates associated with an email address."""
     ...
 
@@ -70,7 +71,7 @@ def find_key_by_any_cert(cert: Certificate, *pin_args: Any) -> Any:
     """Find the private key associated with a certificate."""
     ...
 
-def get_cert_nicknames(certdb: Any, what: int, *user_data: Any) -> List[str]:
+def get_cert_nicknames(certdb: Any, what: int, *user_data: Any) -> list[str]:
     """Get certificate nicknames from the database.
 
     Args:
@@ -117,7 +118,7 @@ def read_hex(hex_string: str, separator: str | None = None) -> bytes:
     """Convert hex string to bytes."""
     ...
 
-def oid_str(oid: Union[int, str, SecItem]) -> str:
+def oid_str(oid: int | str | SecItem) -> str:
     """Get the string representation of an OID.
 
     ``oid`` may be an integer tag, a string (tag name, AVA
@@ -263,7 +264,7 @@ def get_internal_key_slot() -> PK11Slot:
 
 def get_all_tokens(
     mechanism: int = 0, need_rw: bool = False, load_certs: bool = False, *pin_args: Any
-) -> List[PK11Slot]:
+) -> list[PK11Slot]:
     """Get all available tokens."""
     ...
 
@@ -289,7 +290,7 @@ def is_fips() -> bool:
 
 # Key and parameter operations
 def import_sym_key(
-    slot: PK11Slot, mechanism: int, origin: int, operation: int, key_data: Union[bytes, SecItem]
+    slot: PK11Slot, mechanism: int, origin: int, operation: int, key_data: bytes | SecItem
 ) -> Any:
     """Import a symmetric key.
 
@@ -304,7 +305,7 @@ def pub_wrap_sym_key(mechanism: int, pub_key: Any, sym_key: Any) -> bytes:
 
 def param_from_iv(
     mechanism: int,
-    iv: Union[bytes, SecItem, None] = None,
+    iv: bytes | SecItem | None = None,
 ) -> SecItem:
     """Create parameters from an initialization vector.
 
@@ -345,7 +346,7 @@ def get_pad_mechanism(mechanism: int) -> int:
 def data_to_hex(
     data: bytes,
     octets_per_line: int = 16,
-    separator: Union[str, None] = ":",
+    separator: str | None = ":",
 ) -> str:
     """Convert binary data to hexadecimal string.
 
@@ -357,8 +358,8 @@ def data_to_hex(
 
 def make_line_fmt_tuples(
     level: int,
-    *lines: Union[str, List[str], Tuple[str, ...]],
-) -> List[Tuple[int, str]]:
+    *lines: str | list[str] | tuple[str, ...],
+) -> list[tuple[int, str]]:
     """Create formatted line tuples for indented output.
 
     Each positional ``lines`` argument may be a single string or a
@@ -367,7 +368,7 @@ def make_line_fmt_tuples(
     """
     ...
 
-def indented_format(tuples: List[Tuple[int, str]]) -> str:
+def indented_format(tuples: list[tuple[int, str]]) -> str:
     """Format indented text from line tuples."""
     ...
 
@@ -379,7 +380,7 @@ def base64_to_binary(data: str) -> bytes:
     """Convert base64 string to binary data."""
     ...
 
-def fingerprint_format_lines(fingerprint: bytes, level: int = 0) -> List[Tuple[int, str]]:
+def fingerprint_format_lines(fingerprint: bytes, level: int = 0) -> list[tuple[int, str]]:
     """Format fingerprint as indented lines."""
     ...
 
@@ -408,7 +409,7 @@ def pk11_disabled_reason_name(reason: int) -> str:
     """Get the name of a disabled reason."""
     ...
 
-def oid_tag_name(tag: Union[int, str, SecItem]) -> str:
+def oid_tag_name(tag: int | str | SecItem) -> str:
     """Get the name of an OID tag.
 
     ``tag`` may be an integer tag value, a string (tag name, AVA
@@ -417,11 +418,11 @@ def oid_tag_name(tag: Union[int, str, SecItem]) -> str:
     """
     ...
 
-def oid_tag(oid: Union[str, SecItem]) -> int:
+def oid_tag(oid: str | SecItem) -> int:
     """Get the tag for an OID."""
     ...
 
-def oid_dotted_decimal(oid: Union[int, str, SecItem]) -> str:
+def oid_dotted_decimal(oid: int | str | SecItem) -> str:
     """Get the dotted decimal representation of an OID.
 
     ``oid`` may be an integer tag, a string (a tag name like
@@ -431,7 +432,7 @@ def oid_dotted_decimal(oid: Union[int, str, SecItem]) -> str:
     """
     ...
 
-def list_certs(certdb: Any, *user_data: Any) -> List[Certificate]:
+def list_certs(certdb: Any, *user_data: Any) -> list[Certificate]:
     """List all certificates in the database."""
     ...
 
@@ -452,35 +453,35 @@ def cert_general_name_type_from_name(name: str) -> int:
     ...
 
 # Certificate and key usage flags
-def cert_usage_flags(usage: int) -> List[str]:
+def cert_usage_flags(usage: int) -> list[str]:
     """Get list of certificate usage flag names."""
     ...
 
-def key_usage_flags(usage: int) -> List[str]:
+def key_usage_flags(usage: int) -> list[str]:
     """Get list of key usage flag names."""
     ...
 
-def cert_type_flags(cert_type: int) -> List[str]:
+def cert_type_flags(cert_type: int) -> list[str]:
     """Get list of certificate type flag names."""
     ...
 
-def nss_init_flags(flags: int) -> List[str]:
+def nss_init_flags(flags: int) -> list[str]:
     """Get list of NSS init flag names."""
     ...
 
-def x509_key_usage(flags: int, repr_kind: int = 0) -> Union[str, List[str]]:
+def x509_key_usage(flags: int, repr_kind: int = 0) -> str | list[str]:
     """Get X.509 key usage representation."""
     ...
 
-def x509_cert_type(flags: int, repr_kind: int = 0) -> Union[str, List[str]]:
+def x509_cert_type(flags: int, repr_kind: int = 0) -> str | list[str]:
     """Get X.509 certificate type representation."""
     ...
 
-def x509_ext_key_usage(oid_seq: SecItem, repr_kind: int = 0) -> Union[str, List[str]]:
+def x509_ext_key_usage(oid_seq: SecItem, repr_kind: int = 0) -> str | list[str]:
     """Get X.509 extended key usage representation."""
     ...
 
-def x509_alt_name(gen_names: Any, repr_kind: int = 0) -> Union[str, List[str]]:
+def x509_alt_name(gen_names: Any, repr_kind: int = 0) -> str | list[str]:
     """Get X.509 alternative name representation."""
     ...
 
@@ -530,9 +531,9 @@ def pkcs12_set_nickname_collision_callback(callback: Callable[..., Any]) -> None
 
 def pkcs12_export(
     nickname: str,
-    output_file: Union[str, None] = None,
-    pk12_passwd: Union[str, None] = None,
-    cert_db_passwd: Union[str, None] = None,
+    output_file: str | None = None,
+    pk12_passwd: str | None = None,
+    cert_db_passwd: str | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Any:
@@ -582,7 +583,7 @@ SEC_OID_HMAC_SHA1: int
 class SecItem:
     """Represents a security item (binary data)."""
 
-    def __init__(self, data: Union[bytes, str] | None = None, ascii: bool = False) -> None:
+    def __init__(self, data: bytes | str | None = None, ascii: bool = False) -> None:
         """
         Create a SecItem.
 
@@ -621,7 +622,7 @@ class Certificate:
         cls,
         flags: int,
         repr_kind: int = ...,
-    ) -> Union[str, List[str], List[int]]:
+    ) -> str | list[str] | list[int]:
         """Decode an integer trust-flag bitmask into a list of
         flag names / enums / descriptions.
 
@@ -692,7 +693,7 @@ class Certificate:
         ...
 
     @property
-    def extensions(self) -> List[CertificateExtension]:
+    def extensions(self) -> list[CertificateExtension]:
         """List of X.509 extensions on the certificate."""
         ...
 
@@ -731,7 +732,7 @@ class Certificate:
         """Verify the certificate hostname."""
         ...
 
-    def check_valid_times(self, time: Union[int, None] = None, allow_override: bool = False) -> int:
+    def check_valid_times(self, time: int | None = None, allow_override: bool = False) -> int:
         """Check whether the certificate is currently within its
         validity period."""
         ...
@@ -764,7 +765,7 @@ class Certificate:
         """
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format certificate as indented lines."""
         ...
 
@@ -786,18 +787,18 @@ class SymKey:
         """Get the key length in bits."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format key information as indented lines."""
         ...
 
 class AlgorithmID:
     """Represents a cryptographic algorithm identifier."""
 
-    def get_pbe_crypto_mechanism(self, key: SymKey) -> Tuple[int, SecItem]:
+    def get_pbe_crypto_mechanism(self, key: SymKey) -> tuple[int, SecItem]:
         """Get the cryptographic mechanism and parameters."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format algorithm ID information as indented lines."""
         ...
 
@@ -925,11 +926,11 @@ class PK11Slot:
 
     def generate_key_pair(
         self, mechanism: int, params: Any | None = None, *pin_args: Any
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Generate a key pair."""
         ...
 
-    def list_certs(self) -> List[Certificate]:
+    def list_certs(self) -> list[Certificate]:
         """List all certificates in the slot."""
         ...
 
@@ -937,7 +938,7 @@ class PK11Slot:
         """Generate a password-based encryption key."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format slot information as indented lines."""
         ...
 
@@ -992,7 +993,7 @@ class PK11SymKey:
         """Unwrap a symmetric key."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format key information as indented lines."""
         ...
 
@@ -1059,9 +1060,9 @@ class DN:
 
     def __len__(self) -> int: ...
     def __iter__(self) -> Any: ...
-    def __getitem__(self, key: Union[int, slice, str]) -> Any: ...
+    def __getitem__(self, key: int | slice | str) -> Any: ...
     def __contains__(self, key: object) -> bool: ...
-    def has_key(self, key: Union[str, int, SecItem]) -> bool:
+    def has_key(self, key: str | int | SecItem) -> bool:
         """Check if the DN has a specific key."""
         ...
 
@@ -1103,13 +1104,13 @@ class RDN:
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
     def __len__(self) -> int: ...
     def __iter__(self) -> Any: ...
-    def __getitem__(self, key: Union[int, slice, str]) -> Any: ...
+    def __getitem__(self, key: int | slice | str) -> Any: ...
     def __contains__(self, key: object) -> bool: ...
     def __lt__(self, other: RDN) -> bool: ...
     def __le__(self, other: RDN) -> bool: ...
     def __gt__(self, other: RDN) -> bool: ...
     def __ge__(self, other: RDN) -> bool: ...
-    def has_key(self, key: Union[str, int, SecItem]) -> bool:
+    def has_key(self, key: str | int | SecItem) -> bool:
         """Check if the RDN has a specific key."""
         ...
 
@@ -1147,7 +1148,7 @@ class AVA:
 class GeneralName:
     """Represents a general name in a certificate."""
 
-    def get_name(self, repr_kind: int = 0) -> Union[str, Tuple[int, str]]:
+    def get_name(self, repr_kind: int = 0) -> str | tuple[int, str]:
         """Get the name representation."""
         ...
 
@@ -1162,7 +1163,7 @@ class CRLDistributionPt:
         """Get the reasons."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1195,7 +1196,7 @@ class CertificateExtension:
         """Get the extension value."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1219,7 +1220,7 @@ class PublicKey:
         """Get the key type."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1240,7 +1241,7 @@ class RSAPublicKey:
         """Get the exponent."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1251,7 +1252,7 @@ class RSAPublicKey:
 class DSAPublicKey:
     """Represents a DSA public key."""
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1272,7 +1273,7 @@ class SignedData:
         """Get the signature."""
         ...
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1283,7 +1284,7 @@ class SignedData:
 class SubjectPublicKeyInfo:
     """Represents subject public key info."""
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1294,7 +1295,7 @@ class SubjectPublicKeyInfo:
 class KEYPQGParams:
     """Represents PQG parameters for key generation."""
 
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1316,7 +1317,7 @@ class AuthKeyID:
     """X.509 Authority Key Identifier extension wrapper."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1330,7 +1331,7 @@ class BasicConstraints:
     """X.509 Basic Constraints extension wrapper."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1346,8 +1347,8 @@ class CRLDistributionPts:
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
     def __len__(self) -> int: ...
     def __iter__(self) -> Any: ...
-    def __getitem__(self, key: Union[int, slice]) -> Any: ...
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def __getitem__(self, key: int | slice) -> Any: ...
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1363,8 +1364,8 @@ class AuthorityInfoAccesses:
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
     def __len__(self) -> int: ...
     def __iter__(self) -> Any: ...
-    def __getitem__(self, key: Union[int, slice]) -> Any: ...
-    def format_lines(self, level: int = 0) -> List[Tuple[int, str]]:
+    def __getitem__(self, key: int | slice) -> Any: ...
+    def format_lines(self, level: int = 0) -> list[tuple[int, str]]:
         """Format as indented lines."""
         ...
 
@@ -1392,7 +1393,7 @@ class PKCS12Decoder:
     def __init__(self, *args: Any, **kwargs: Any) -> None: ...
     def __iter__(self) -> Any: ...
     def __len__(self) -> int: ...
-    def __getitem__(self, key: Union[int, slice]) -> Any: ...
+    def __getitem__(self, key: int | slice) -> Any: ...
     def __getattr__(self, name: str) -> Any: ...
 
 # ---------------------------------------------------------------------------

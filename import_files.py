@@ -14,17 +14,16 @@ import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
 
 
 @dataclass
 class CopyStats:
     """Accumulates the outcome of a recursive copy operation."""
 
-    copied_files: List[Path] = field(default_factory=list)
-    copied_dirs: List[Path] = field(default_factory=list)
-    skipped: List[Path] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+    copied_files: list[Path] = field(default_factory=list)
+    copied_dirs: list[Path] = field(default_factory=list)
+    skipped: list[Path] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
 
 SCRIPT_DIR = Path(__file__).parent.absolute()

@@ -21,7 +21,7 @@ The module exposes:
   access.
 """
 
-from typing import Any, List, Tuple
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Exception classes
@@ -60,7 +60,7 @@ class CertVerifyError(NSPRError):
 
     #: A list of ``(depth, cert, error)`` style tuples describing the
     #: per-certificate verification failures recorded by NSS.
-    log: List[Tuple[Any, ...]]
+    log: list[tuple[Any, ...]]
 
     def __init__(self, *args: Any) -> None: ...
 
@@ -80,7 +80,7 @@ def nspr_error_string(errno: int) -> str:
     by NSPR / NSS."""
     ...
 
-def lookup_nspr_error(errno: int) -> Tuple[int, str, str] | None:
+def lookup_nspr_error(errno: int) -> tuple[int, str, str] | None:
     """Look up an NSPR / NSS error code.
 
     Returns a ``(errno, name, string)`` tuple if the code is known,
