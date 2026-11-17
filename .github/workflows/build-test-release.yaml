@@ -44,7 +44,7 @@ jobs:
       id-token: write       # OIDC for build provenance attestations
       attestations: write   # Build provenance attestations
     # yamllint disable-line rule:line-length
-    uses: lfreleng-actions/python-workflows/.github/workflows/build-test-release-multiarch.yaml@e6e1ea99f84dc0993a14759c749555268a393cab  # v0.6.0
+    uses: lfreleng-actions/python-workflows/.github/workflows/build-test-release-multiarch.yaml@29e6dfbbf37206cc5334475969ca48d44f117af7  # v0.7.2
     with:
       # Build NSS/NSPR from source during the python-build step.
       make: true
