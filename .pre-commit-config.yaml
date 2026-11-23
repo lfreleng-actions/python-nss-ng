@@ -8,7 +8,7 @@ ci:
   # mypy) to resolve the test imports, and any additional_dependencies
   # exceed pre-commit.ci's 250 MiB per-hook limit (the bare hook alone
   # is 248.7 MiB), so it runs locally only.
-  skip: [pytest, gha-workflow-linter, basedpyright]
+  skip: [gha-workflow-linter, basedpyright]
   autofix_commit_msg: |
     Chore: pre-commit autofixes
 
@@ -150,16 +150,3 @@ repos:
     rev: 380c07e2a17ef43c3c5b8579db3b4a46af475bf5  # frozen: v1.12.0
     hooks:
       - id: gha-workflow-linter
-
-  # Run tests last to ensure all code changes from other hooks are tested
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: bash
-        # yamllint disable-line rule:line-length
-        args: [-c, 'if [ -x .venv/bin/pytest ]; then .venv/bin/pytest --tb=short -q --cov=nss --cov-report=xml --cov-report=html; else echo "Skipping pytest: .venv/bin/pytest not found (run python -m venv .venv && .venv/bin/pip install -e .[test])"; exit 0; fi']
-        language: system
-        pass_filenames: false
-        types: [python]
-        files: ^(src|test)/.*\.py$
