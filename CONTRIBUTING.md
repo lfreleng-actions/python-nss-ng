@@ -302,7 +302,9 @@ pip install pre-commit
 pre-commit install
 ```
 
-This will automatically run checks before each commit.
+This will automatically run checks before each commit. The hooks do
+not run the test suite: CI runs it on every pull request, and you can
+run it locally with `uv run pytest`.
 
 ### C Code Guidelines
 
